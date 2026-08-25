@@ -295,15 +295,21 @@ async function toggleBday(ev){
   else { wished.push(ev.id); const t='✅ '+(ev.summary||''); try{ await mcp(UPDATE_TOOL,{calendarId:ev._cal||PRIMARY,eventId:ev.id,summary:t}); ev.summary=t; }catch(e){} toast('Souhaité 🎂'); }
   saveJSON('td_wished',wished); render();
 }
-function isHealthDone(ev){ const a=healthDone[VIEW_STR]||[]; return a.indexOf(ev.id)>=0; }
-function toggleHealth(ev){ const k=VIEW_STR||todayStr; const a=(healthDone[k]||[]).slice(); const i=a.indexOf(ev.id); if(i>=0)a.splice(i,1); else a.push(ev.id); healthDone[k]=a; saveJSON('td_health',healthDone); render(); }
+function isHealthDone(ev){ return /^✅/.test(ev.summary||''); }
+async function toggleHealth(ev){
+  const cur=ev.summary||''; const nowDone=/^✅/.test(cur);
+  const newTitle= nowDone ? cur.replace(/^✅\s*/,'') : '✅ '+cur;
+  ev.summary=newTitle; render();
+  try{ await mcp(UPDATE_TOOL,{calendarId:ev._cal||PRIMARY,eventId:ev.id,summary:newTitle}); }
+  catch(err){ ev.summary=cur; render(); toast('⚠️ '+err.message); }
+}
 function renderSante(health){
   const done=health.filter(isHealthDone).length;
   $('c-sante').textContent=done+'/'+health.length;
   $('santeHead').style.display=health.length?'flex':'none';
   if(!health.length){ $('sante').style.display='none'; return; }
   let html='<div class="sante-chips">';
-  html+=health.map(e=>{ const on=isHealthDone(e); return '<span class="schip '+(on?'on':'')+'" data-hid="'+esc(e.id)+'"><span class="sbox"></span><span class="stime">'+esc(timeLabel(e))+'</span><span class="stxt">'+esc((e.summary||'').trim())+'</span></span>'; }).join('');
+  html+=health.map(e=>{ const on=isHealthDone(e); return '<span class="schip '+(on?'on':'')+'" data-hid="'+esc(e.id)+'"><span class="sbox"></span><span class="stime">'+esc(timeLabel(e))+'</span><span class="stxt">'+esc((e.summary||'').replace(/^✅\s*/,'').trim())+'</span></span>'; }).join('');
   html+='</div>';
   $('sante').innerHTML=html;
   $('santeHead').classList.toggle('open',!!santeOpen);
