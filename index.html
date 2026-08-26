@@ -123,6 +123,49 @@
   .toast{ position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px); background:#2f2a22; color:#fff; padding:10px 16px; border-radius:12px; font-size:14px; opacity:0; transition:.2s; z-index:60; max-width:90%; text-align:center; }
   .toast.on{ opacity:1; transform:translateX(-50%) translateY(0); }
   .spin{ color:#a49c8c; font-size:14px; padding:10px 2px; }
+  /* ---- onglets ---- */
+  .tabbar{ display:flex; gap:6px; margin:14px 0 2px; overflow-x:auto; padding-bottom:3px; scrollbar-width:none; }
+  .tabbar::-webkit-scrollbar{ display:none; }
+  .tabbtn{ display:inline-flex; align-items:center; gap:6px; border:1px solid #e6e1d7; background:#fff; color:#8a8375; border-radius:20px; padding:8px 14px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer; white-space:nowrap; flex:0 0 auto; }
+  .tabbtn:hover{ background:#f6f4ee; color:#6f6857; }
+  .tabbtn.on{ background:#2f2a22; border-color:#2f2a22; color:#fff; }
+  .tbadge{ background:#efece4; color:#8a8375; border-radius:20px; padding:1px 7px; font-size:10.5px; font-weight:700; }
+  .tbadge:empty{ display:none; }
+  .tabbtn.on .tbadge{ background:rgba(255,255,255,.24); color:#fff; }
+  .pane[hidden]{ display:none; }
+  .soon{ text-align:center; padding:34px 14px; }
+  .soon .se{ font-size:34px; display:block; margin-bottom:12px; }
+  .soon .st{ font-size:15px; font-weight:700; color:#6f6857; margin-bottom:6px; }
+  .soon .sd{ font-size:13.5px; line-height:1.55; color:#a49c8c; max-width:330px; margin:0 auto; }
+  /* ---- 📧 Emails à traiter ---- */
+  .mailrow{ display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid #f2efe8; text-decoration:none; color:inherit; }
+  .mailrow:last-child{ border-bottom:none; }
+  .mailrow .mn{ flex:1; min-width:0; font-size:14px; font-weight:600; color:#4a4438; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .mailrow .mu{ background:#fdeceb; color:#b5443a; border-radius:20px; padding:2px 9px; font-size:11.5px; font-weight:700; flex:0 0 auto; }
+  .mailrow .mu.zero{ background:#eef3ec; color:#7bab6a; }
+  .mailrow .mtot{ color:#c2bbab; font-size:11.5px; flex:0 0 auto; }
+  .msub{ display:flex; gap:8px; align-items:baseline; padding:6px 0; border-bottom:1px solid #f7f5f0; text-decoration:none; color:inherit; }
+  .msub:last-child{ border-bottom:none; }
+  .msub .mfrom{ font-size:11.5px; color:#a49c8c; flex:0 0 104px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .msub .mtitle{ font-size:13.5px; color:#33302a; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .sd-head{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#b0a894; margin:12px 2px 2px; }
+  /* ---- 📋 To-do website ---- */
+  .todo{ display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-bottom:1px solid #f2efe8; }
+  .todo:last-child{ border-bottom:none; }
+  .prio{ font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; border-radius:10px; padding:3px 8px; flex:0 0 auto; margin-top:2px; white-space:nowrap; }
+  .p3{ background:#fdeceb; color:#b5443a; } .p2{ background:#fbf1e4; color:#a5683a; }
+  .p1{ background:#eef3f9; color:#3b6ea5; } .p0{ background:#f1efe9; color:#8a8375; }
+  .todo .tdb{ flex:1; min-width:0; }
+  .todo .tdt{ font-size:14px; font-weight:600; color:#26231e; }
+  .todo .tdm{ color:#a49c8c; font-size:11.5px; margin-top:2px; }
+  .agbtn{ border:1px solid #cfe0c6; background:#f2f7f0; color:#4d7b40; border-radius:8px; padding:5px 9px; font-size:12px; font-weight:600; cursor:pointer; flex:0 0 auto; white-space:nowrap; margin-top:1px; }
+  .agbtn:hover{ background:#e7f0e3; border-color:#b7d3ab; }
+  .agbtn:disabled{ opacity:.45; cursor:default; }
+  .morebtn{ width:100%; margin-top:10px; border:1px dashed #ded8ca; background:none; color:#8a8375; border-radius:10px; padding:8px; font-size:12.5px; font-weight:600; cursor:pointer; }
+  .morebtn:hover{ background:#faf8f3; }
+  .dtin{ width:100%; border:1px solid #e2ddd2; border-radius:10px; padding:11px 12px; font-size:15px; background:#fdfcfa; font-family:inherit; }
+  .durbtn{ border:1px solid #e2ddd2; background:#fff; border-radius:20px; padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer; color:#6f6857; }
+  .durbtn.on{ background:#2f2a22; color:#fff; border-color:#2f2a22; }
 </style>
 </head>
 <body>
@@ -137,40 +180,79 @@
 <div class="wrap">
   <div class="date" id="date"></div>
   <div class="titlerow"><button class="navbtn" id="navPrev" title="Jour précédent">‹</button><h1 id="h1title">Aujourd'hui</h1><button class="navbtn" id="navNext" title="Jour suivant">›</button><button class="todaybtn" id="navToday" style="display:none">aujourd'hui</button></div>
-  <div class="sub">Toute ta journée, tous tes agendas, en une page.</div>
+  <div class="sub" id="subline">Toute ta journée, tous tes agendas, en une page.</div>
 
-  <div id="status" class="spin">Chargement de ta journée…</div>
-  <div id="content" style="display:none">
-
-    <div class="section-title sante-head" id="santeHead" role="button" tabindex="0" style="margin-top:6px">🩺 Santé du jour <span class="count" id="c-sante">0</span><span class="sante-caret" id="santeCaret">▸</span></div>
-    <div class="card sante-card" id="sante" style="display:none"></div>
-
-    <div class="topgrid">
-      <div class="tbox"><div class="tlabel">🎂 Anniversaires</div><div id="bday" class="tbody"></div></div>
-      <div class="tbox"><div class="tlabel">🗓️ Contexte du jour</div><div id="ctx" class="tbody"></div></div>
-    </div>
-
-    <div class="section-title">📅 Rendez-vous & meetings <span class="count" id="c-meet">0</span></div>
-    <div class="card" id="meetings"></div>
-
-    <div class="section-title">✅ Tâches du jour <span class="count" id="c-task">0</span></div>
-    <div class="progress" id="progress"></div>
-    <div class="bar"><i id="barfill"></i></div>
-    <div class="card" id="tasks"></div>
-    <button class="btn btn-primary" id="closeDay">🌙 Clôturer ma journée — reporter les non-faits à demain</button>
-
-    <div class="section-title">🧠 Vide-tête</div>
-    <div class="card">
-      <div class="bd-input"><input id="bdText" placeholder="Un truc qui te passe par la tête…" autocomplete="off"></div>
-      <div class="tags"><span class="bd-hint" style="margin:0 4px 0 0;">Ranger dans :</span>
-        <button class="tag" data-t="Général">Général</button>
-        <button class="tag" data-t="Website">Website</button>
-        <button class="tag" data-t="Note">Note perso</button>
-      </div>
-      <div class="bd-hint">Tape ton idée puis clique une catégorie (Entrée = Note). « Copier le lot » copie tout le Général (ou Website) d'un coup à coller dans ta Sheet.</div>
-      <div id="bdList"></div>
-    </div>
+  <div class="tabbar" id="tabbar">
+    <button class="tabbtn on" data-tab="today">☀️ Aujourd'hui</button>
+    <button class="tabbtn" data-tab="mail">📧 Mails <span class="tbadge" id="c-mail"></span></button>
+    <button class="tabbtn" data-tab="todo">📋 To-do <span class="tbadge" id="c-todo"></span></button>
+    <button class="tabbtn" data-tab="perf">📈 Perfs</button>
+    <button class="tabbtn" data-tab="edito">✍️ Édito</button>
   </div>
+
+  <!-- ============ ONGLET AUJOURD'HUI ============ -->
+  <section class="pane" id="pane-today">
+    <div id="status" class="spin">Chargement de ta journée…</div>
+    <div id="content" style="display:none">
+
+      <div class="section-title sante-head" id="santeHead" role="button" tabindex="0" style="margin-top:6px">🩺 Santé du jour <span class="count" id="c-sante">0</span><span class="sante-caret" id="santeCaret">▸</span></div>
+      <div class="card sante-card" id="sante" style="display:none"></div>
+
+      <div class="topgrid">
+        <div class="tbox"><div class="tlabel">🎂 Anniversaires</div><div id="bday" class="tbody"></div></div>
+        <div class="tbox"><div class="tlabel">🗓️ Contexte du jour</div><div id="ctx" class="tbody"></div></div>
+      </div>
+
+      <div class="section-title">📅 Rendez-vous & meetings <span class="count" id="c-meet">0</span></div>
+      <div class="card" id="meetings"></div>
+
+      <div class="section-title">✅ Tâches du jour <span class="count" id="c-task">0</span></div>
+      <div class="progress" id="progress"></div>
+      <div class="bar"><i id="barfill"></i></div>
+      <div class="card" id="tasks"></div>
+      <button class="btn btn-primary" id="closeDay">🌙 Clôturer ma journée — reporter les non-faits à demain</button>
+
+      <div class="section-title sante-head" id="brainHead" role="button" tabindex="0">🧠 Vide-tête <span class="count" id="c-brain">0</span><span class="sante-caret">▸</span></div>
+      <div class="card" id="brainCard" style="display:none">
+        <div class="bd-input"><input id="bdText" placeholder="Un truc qui te passe par la tête…" autocomplete="off"></div>
+        <div class="tags"><span class="bd-hint" style="margin:0 4px 0 0;">Ranger dans :</span>
+          <button class="tag" data-t="Général">Général</button>
+          <button class="tag" data-t="Website">Website</button>
+          <button class="tag" data-t="Note">Note perso</button>
+        </div>
+        <div class="bd-hint">Tape ton idée puis clique une catégorie (Entrée = Note). « Copier le lot » copie tout le Général (ou Website) d'un coup à coller dans ta Sheet.</div>
+        <div id="bdList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ONGLET MAILS ============ -->
+  <section class="pane" id="pane-mail" hidden>
+    <div class="card" id="mails" style="margin-top:14px"><div class="empty">Chargement de Gmail…</div></div>
+  </section>
+
+  <!-- ============ ONGLET TO-DO ============ -->
+  <section class="pane" id="pane-todo" hidden>
+    <div class="card" id="todo" style="margin-top:14px"><div class="empty">Chargement de la Sheet…</div></div>
+  </section>
+
+  <!-- ============ ONGLET PERFS (phase 2) ============ -->
+  <section class="pane" id="pane-perf" hidden>
+    <div class="card" style="margin-top:14px"><div class="soon">
+      <span class="se">📈</span>
+      <div class="st">Perfs de contenu</div>
+      <div class="sd">Vues, engagement et progression par plateforme. À brancher sur Metricool — c'est la phase 2.</div>
+    </div></div>
+  </section>
+
+  <!-- ============ ONGLET ÉDITO (phase 2) ============ -->
+  <section class="pane" id="pane-edito" hidden>
+    <div class="card" style="margin-top:14px"><div class="soon">
+      <span class="se">✍️</span>
+      <div class="st">Édito</div>
+      <div class="sd">Idées de contenus, sujets en cours d'écriture et calendrier de publication. À construire — phase 2.</div>
+    </div></div>
+  </section>
 </div>
 
 <div class="overlay" id="overlay"><div class="modal">
@@ -191,6 +273,18 @@
   <textarea id="aiQ" class="aiq" placeholder="Qu'est-ce que je fais pour toi ? (ex : raccourcis ce script + applique les modifs indiquées). Vide = je m'occupe de la tâche au mieux."></textarea>
   <div class="mactions"><button class="btn btn-ghost" id="aiCancel">Fermer</button><button class="btn btn-go" id="aiAsk">Envoyer à Claude</button></div>
   <div id="aiOut" class="aiout"></div>
+</div></div>
+<div class="overlay" id="agOverlay"><div class="modal">
+  <h3>📅 Mettre dans l'agenda</h3>
+  <p id="agName" style="font-weight:600;color:#4a4438;margin:0 0 12px"></p>
+  <input type="datetime-local" id="agWhen" class="dtin">
+  <div class="tags" style="margin-top:12px"><span class="bd-hint" style="margin:0 4px 0 0;">Durée :</span>
+    <button class="durbtn" data-dur="30">30 min</button>
+    <button class="durbtn on" data-dur="60">1 h</button>
+    <button class="durbtn" data-dur="120">2 h</button>
+  </div>
+  <div class="bd-hint">La tâche est créée dans ton agenda principal, puis la ligne passe de « en cours » à « déjà dans agenda ».</div>
+  <div class="mactions"><button class="btn btn-ghost" id="agCancel">Annuler</button><button class="btn btn-go" id="agGo">Créer</button></div>
 </div></div>
 <div class="toast" id="toast"></div>
 
@@ -216,19 +310,19 @@ function esc(s){return (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;
 
 let today, todayStr;
 const GOOGLE_CLIENT_ID='146425340711-i1rpst8d8u2reugobnql4le4dsivdbf0.apps.googleusercontent.com';
-const SCOPE='https://www.googleapis.com/auth/calendar';
+const SCOPE='https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/spreadsheets';
 const GAPI='https://www.googleapis.com/calendar/v3';
 let ACCESS_TOKEN=null, tokenClient=null;
 function offISO(d){ const o=-d.getTimezoneOffset(); const s=o>=0?'+':'-'; const a=Math.abs(o); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds())+s+pad(Math.floor(a/60))+':'+pad(a%60); }
 function toOffsetISO(x){ if(x==null) return x; if(/([+\-]\d\d:?\d\d|Z)$/.test(x)) return x; return offISO(new Date(x)); }
 function mapEvent(e){ const conf=e.hangoutLink||(e.conferenceData&&e.conferenceData.entryPoints&&((e.conferenceData.entryPoints.find(p=>p.entryPointType==='video')||{}).uri))||''; return Object.assign({},e,{conferenceUrl:conf}); }
-function saveTok(resp){ try{ const exp=Date.now()+(((resp.expires_in|| 3600)-90)*1000); localStorage.setItem('td_gtok',JSON.stringify({t:resp.access_token,exp:exp})); }catch(e){} }
-function cachedTok(){ try{ const o=JSON.parse(localStorage.getItem('td_gtok')||'null'); if(o&&o.t&&o.exp>Date.now()) return o.t; }catch(e){} return null; }
-async function gfetch(method,path,body){
+function saveTok(resp){ try{ const exp=Date.now()+(((resp.expires_in|| 3600)-90)*1000); localStorage.setItem('td_gtok_v2',JSON.stringify({t:resp.access_token,exp:exp})); }catch(e){} }
+function cachedTok(){ try{ const o=JSON.parse(localStorage.getItem('td_gtok_v2')||'null'); if(o&&o.t&&o.exp>Date.now()) return o.t; }catch(e){} return null; }
+async function gfetch(method,path,body,base){
   if(!ACCESS_TOKEN){ const c=cachedTok(); if(c) ACCESS_TOKEN=c; else throw new Error('non connecté'); }
-  const doFetch=()=>{ const opt={method,headers:{'Authorization':'Bearer '+ACCESS_TOKEN,'Content-Type':'application/json'}}; if(body) opt.body=JSON.stringify(body); return fetch(GAPI+path,opt); };
+  const doFetch=()=>{ const opt={method,headers:{'Authorization':'Bearer '+ACCESS_TOKEN,'Content-Type':'application/json'}}; if(body) opt.body=JSON.stringify(body); return fetch((base||GAPI)+path,opt); };
   let res=await doFetch();
-  if(res.status===401){ localStorage.removeItem('td_gtok'); ACCESS_TOKEN=null; try{ await getToken(); res=await doFetch(); }catch(e){ showGate('Session Google expirée — reconnecte-toi.'); throw new Error('reconnexion nécessaire'); } }
+  if(res.status===401){ localStorage.removeItem('td_gtok_v2'); ACCESS_TOKEN=null; try{ await getToken(); res=await doFetch(); }catch(e){ showGate('Session Google expirée — reconnecte-toi.'); throw new Error('reconnexion nécessaire'); } }
   if(!res.ok){ let t=''; try{t=(await res.json()).error.message;}catch(e){} throw new Error('Google '+res.status+(t?' : '+t:'')); }
   return res.status===204?{}:res.json();
 }
@@ -373,8 +467,7 @@ async function loadToday(silent){
   const view=new Date(today.getFullYear(),today.getMonth(),today.getDate()+VIEW_OFFSET);
   VIEW_STR=ymd(view);
   $('date').textContent=view.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
-  $('h1title').textContent = VIEW_OFFSET===0?'Aujourd\'hui':(VIEW_OFFSET===1?'Demain':(VIEW_OFFSET===-1?'Hier':capit(view.toLocaleDateString('fr-FR',{weekday:'long'}))));
-  $('navToday').style.display = VIEW_OFFSET===0?'none':'inline-block';
+  if(TAB==='today'){ $('h1title').textContent=dayTitle(); $('navToday').style.display=VIEW_OFFSET===0?'none':'inline-block'; }
   if(!silent){ $('status').style.display='block'; $('status').className='spin'; $('status').textContent='Chargement…'; $('content').style.display='none'; }
   const start=view;
   const end=new Date(today.getFullYear(),today.getMonth(),today.getDate()+VIEW_OFFSET+1);
@@ -513,6 +606,7 @@ document.querySelectorAll('.tag').forEach(b=>b.addEventListener('click',()=>addB
 $('bdText').addEventListener('keydown',e=>{ if(e.key==='Enter')addBrain('Note'); });
 const chipColor={'Général':'#f6ece2;color:#a5683a','Website':'#e8f0f8;color:#3b6ea5','Note':'#efefef;color:#6a6a6a'};
 function renderBrain(){
+  $('c-brain').textContent=brain.length;
   let html='';
   for(const g of ['Général','Website','Note']){ const items=brain.filter(b=>b.tag===g); if(!items.length)continue;
     html+=`<div class="bd-group"><h4><span>${g} (${items.length})</span>${g!=='Note'?`<button class="copy" data-copy="${g}">Copier le lot</button>`:''}</h4>`;
@@ -568,11 +662,291 @@ $('navPrev').addEventListener('click',function(){ VIEW_OFFSET--; loadToday(); })
 $('navNext').addEventListener('click',function(){ VIEW_OFFSET++; loadToday(); });
 $('navToday').addEventListener('click',function(){ VIEW_OFFSET=0; loadToday(); });
 renderBrain();
+
+/* ================================================================
+   📧 EMAILS À TRAITER  +  📋 TO-DO WEBSITE (Sheet)
+   ================================================================ */
+
+const GMAIL='https://gmail.googleapis.com/gmail/v1';
+const SHEETS='https://sheets.googleapis.com/v4/spreadsheets';
+const SHEET_ID='1aV46Ks8rUTs8X2k46He4Aw78kH9BEenMhPsW9l0xXrY';
+
+/* ⬇️⬇️  À REMPLIR : les noms EXACTS de tes onglets.
+   Si tu laisses '' (vide), le tableau devine tout seul. */
+const TAB_ENCOURS = 'EN COURS';
+const TAB_AGENDA  = 'TACHES DEJA DS AGENDA';
+
+/* Combien de tâches to-do affichées avant le bouton « voir tout » */
+const TODO_VISIBLE = 10;
+
+function norm(s){
+  return String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[\u2018\u2019\u02bc`]/g,"'").replace(/\s+/g,' ').trim().toLowerCase();
+}
+
+/* ---------- 📧 GMAIL ---------- */
+const MAIL_GROUPS=[
+  { icon:'📥', label:'1. À traiter',            match:n=>n==='1. a traiter' },
+  { icon:'⚖️', label:'Abonnés — questions juridiques', match:n=>n.indexOf('abonnes')>=0 && /\/a traiter$/.test(n) },
+  { icon:'🔎', label:'! À vérifier (tous dossiers)',   match:n=>/(^|\/)!\s*a verifier$/.test(n) }
+];
+let MAIL_STATE=null;
+function gm(path){ return gfetch('GET',path,null,GMAIL); }
+function cleanFrom(f){
+  const m=String(f||'').match(/^\s*"?([^"<]*?)"?\s*</);
+  let n=(m&&m[1]?m[1]:String(f||'')).replace(/[<>]/g,'').trim();
+  return n.length>16?n.slice(0,16)+'…':(n||'—');
+}
+function gmailUrlForIds(ids){
+  const q=(ids.length?ids.map(l=>'label:"'+l.name+'"').join(' OR '):'is:unread');
+  return 'https://mail.google.com/mail/u/0/#search/'+encodeURIComponent('('+q+') is:unread');
+}
+async function loadMails(){
+  try{
+    const r=await gm('/users/me/labels');
+    const labels=(r.labels||[]).filter(l=>l.name);
+    const groups=MAIL_GROUPS.map(function(g){
+      return { icon:g.icon, label:g.label, unread:0, total:0,
+               ids:labels.filter(l=>g.match(norm(l.name))).map(l=>({id:l.id,name:l.name})) };
+    });
+    for(const g of groups){
+      for(const l of g.ids){
+        try{ const d=await gm('/users/me/labels/'+encodeURIComponent(l.id));
+          g.unread+=(d.threadsUnread||0); g.total+=(d.threadsTotal||0);
+        }catch(e){}
+      }
+    }
+    /* aperçu : les derniers non-lus des 2 premiers groupes */
+    const focus=[].concat(groups[0].ids,groups[1].ids);
+    let preview=[];
+    for(const l of focus){
+      try{
+        const lst=await gm('/users/me/messages?maxResults=4&labelIds='+encodeURIComponent(l.id)+'&labelIds=UNREAD');
+        for(const m of (lst.messages||[])){
+          try{
+            const d=await gm('/users/me/messages/'+m.id+'?format=metadata&metadataHeaders=Subject&metadataHeaders=From');
+            const h={}; ((d.payload&&d.payload.headers)||[]).forEach(x=>{h[String(x.name).toLowerCase()]=x.value;});
+            preview.push({tid:d.threadId,subject:h.subject||'(sans objet)',from:cleanFrom(h.from)});
+          }catch(e){}
+        }
+      }catch(e){}
+    }
+    const seen=new Set(); preview=preview.filter(p=>{ if(seen.has(p.tid))return false; seen.add(p.tid); return true; }).slice(0,6);
+    MAIL_STATE={groups:groups,preview:preview}; renderMails();
+  }catch(e){
+    setBadge('c-mail','!');
+    $('mails').innerHTML='<div class="empty">⚠️ Gmail : '+esc(e.message)+'</div>';
+  }
+}
+function renderMails(){
+  if(!MAIL_STATE) return;
+  const groups=MAIL_STATE.groups, preview=MAIL_STATE.preview;
+  setBadge('c-mail',groups.reduce((a,g)=>a+g.unread,0));
+  let h=groups.map(function(g){
+    return '<a class="mailrow" target="_blank" rel="noopener" href="'+esc(gmailUrlForIds(g.ids))+'">'
+      +'<span>'+g.icon+'</span><span class="mn">'+esc(g.label)+'</span>'
+      +'<span class="mu '+(g.unread?'':'zero')+'">'+g.unread+' non-lu'+(g.unread>1?'s':'')+'</span>'
+      +'<span class="mtot">'+g.total+' au total</span></a>';
+  }).join('');
+  if(preview.length){
+    h+='<div class="sd-head">Derniers non-lus</div>'+preview.map(function(p){
+      return '<a class="msub" target="_blank" rel="noopener" href="https://mail.google.com/mail/u/0/#all/'+esc(p.tid)+'">'
+        +'<span class="mfrom">'+esc(p.from)+'</span><span class="mtitle">'+esc(p.subject)+'</span></a>';
+    }).join('');
+  }
+  $('mails').innerHTML=h||'<div class="empty">Rien à traiter 🎉</div>';
+}
+
+/* ---------- 📋 SHEET TO-DO ---------- */
+let SHEET_META=null, TODO=[], SRC=null, TODO_ALL=false;
+function sh(method,path,body){ return gfetch(method,'/'+SHEET_ID+path,body,SHEETS); }
+function a1(title,range){ return encodeURIComponent("'"+String(title).replace(/'/g,"''")+"'!"+range); }
+async function sheetMeta(){
+  if(SHEET_META) return SHEET_META;
+  const r=await sh('GET','?fields=sheets.properties(sheetId%2Ctitle%2Cindex)');
+  SHEET_META=(r.sheets||[]).map(s=>s.properties||{});
+  return SHEET_META;
+}
+function findTab(explicit,re,fallbackIndex){
+  const m=SHEET_META||[];
+  if(explicit){ const f=m.filter(p=>norm(p.title)===norm(explicit))[0]; if(f) return f; }
+  if(re){ const f=m.filter(p=>re.test(norm(p.title)))[0]; if(f) return f; }
+  return (fallbackIndex!=null)?m[fallbackIndex]:null;
+}
+async function readTab(title){
+  const r=await sh('GET','/values/'+a1(title,'A1:Z600')+'?majorDimension=ROWS');
+  const rows=r.values||[]; let hi=-1;
+  for(let i=0;i<Math.min(rows.length,10);i++){ if((rows[i]||[]).some(c=>norm(c)==='action')){ hi=i; break; } }
+  return { rows:rows, headers: hi>=0?(rows[hi]||[]).map(norm):[], headerIndex:hi };
+}
+function colOf(headers,name){ return headers.indexOf(norm(name)); }
+function prioRank(p){ const n=norm(p);
+  if(!n) return -1;
+  if(n.indexOf('tres urgent')>=0) return 3;
+  if(n.indexOf('urgent')>=0) return 2;
+  if(n.indexOf('moder')>=0) return 1;
+  if(n.indexOf('faible')>=0) return 0;
+  return -1; }
+function prioClass(r){ return r===3?'p3':(r===2?'p2':(r===1?'p1':'p0')); }
+function prioLabel(p){ const t=String(p||'').trim(); return t||'sans prio'; }
+
+async function loadTodo(){
+  try{
+    await sheetMeta();
+    const tab=findTab(TAB_ENCOURS,/en cours/,0);
+    if(!tab) throw new Error('onglet « en cours » introuvable');
+    const d=await readTab(tab.title);
+    if(d.headerIndex<0) throw new Error('colonne ACTION introuvable dans « '+tab.title+' »');
+    const H=d.headers;
+    const cA=colOf(H,'action'), cP=colOf(H,'priorite'), cT=colOf(H,'type'), cE=colOf(H,'etat'),
+          cL=colOf(H,'liens vers doc'), cD=colOf(H,'details'),
+          cDu=colOf(H,"date de l'attendu");
+    TODO=[];
+    for(let i=d.headerIndex+1;i<d.rows.length;i++){
+      const r=d.rows[i]||[];
+      const act=String(cA>=0?(r[cA]||''):'').trim(); if(!act) continue;
+      TODO.push({ rowIdx:i, values:r, action:act,
+        prio:cP>=0?(r[cP]||''):'', type:cT>=0?(r[cT]||''):'', etat:cE>=0?(r[cE]||''):'',
+        lien:cL>=0?(r[cL]||''):'', det:cD>=0?(r[cD]||''):'', due:cDu>=0?(r[cDu]||''):'' });
+    }
+    TODO.sort((a,b)=>prioRank(b.prio)-prioRank(a.prio));
+    SRC={headers:H,headerIndex:d.headerIndex,tab:tab};
+    renderTodo();
+  }catch(e){
+    setBadge('c-todo','!');
+    $('todo').innerHTML='<div class="empty">⚠️ Sheet : '+esc(e.message)+'</div>';
+  }
+}
+function renderTodo(){
+  setBadge('c-todo',TODO.length);
+  if(!TODO.length){ $('todo').innerHTML='<div class="empty">Ta to-do « en cours » est vide 🎉</div>'; return; }
+  const list=TODO_ALL?TODO:TODO.slice(0,TODO_VISIBLE);
+  let h=list.map(function(t,i){
+    const r=prioRank(t.prio);
+    const meta=[t.type,t.etat,t.due?('attendu '+t.due):'',t.det].filter(x=>String(x||'').trim()).join(' · ');
+    const link=/^https?:\/\//i.test(String(t.lien).trim())
+      ? '<div class="links"><a class="lnk" target="_blank" rel="noopener" href="'+esc(t.lien.trim())+'">'+iconFor(t.lien.trim())+' '+esc(labelFor(t.lien.trim()))+'</a></div>'
+      : (String(t.lien||'').trim()?'<div class="tdm">📎 '+esc(t.lien)+'</div>':'');
+    return '<div class="todo">'
+      +'<span class="prio '+prioClass(r)+'">'+esc(prioLabel(t.prio))+'</span>'
+      +'<div class="tdb"><div class="tdt">'+esc(t.action)+'</div>'
+      +(meta?'<div class="tdm">'+esc(meta)+'</div>':'')+link+'</div>'
+      +'<button class="agbtn" data-ag="'+i+'">📅 Agenda</button></div>';
+  }).join('');
+  if(TODO.length>TODO_VISIBLE){
+    h+='<button class="morebtn" id="todoMore">'+(TODO_ALL?'▴ n’afficher que les '+TODO_VISIBLE+' plus urgentes':'▾ afficher les '+TODO.length+' tâches')+'</button>';
+  }
+  $('todo').innerHTML=h;
+}
+$('todo').addEventListener('click',function(e){
+  if(e.target && e.target.id==='todoMore'){ TODO_ALL=!TODO_ALL; renderTodo(); return; }
+  const el=e.target.closest&&e.target.closest('[data-ag]'); if(!el) return;
+  const list=TODO_ALL?TODO:TODO.slice(0,TODO_VISIBLE);
+  const t=list[+el.getAttribute('data-ag')]; if(t) openAgenda(t);
+});
+
+/* ---------- mettre une tâche dans l'agenda ---------- */
+let agTarget=null, AG_DUR=60;
+function markDur(){ document.querySelectorAll('#agOverlay .durbtn').forEach(function(b){ b.classList.toggle('on',+b.getAttribute('data-dur')===AG_DUR); }); }
+function openAgenda(t){
+  agTarget=t; $('agName').textContent=t.action;
+  const d=new Date(); d.setMinutes(0,0,0); d.setHours(d.getHours()+1);
+  $('agWhen').value=ymd(d)+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
+  AG_DUR=60; markDur(); $('agOverlay').classList.add('on');
+}
+$('agCancel').addEventListener('click',()=>$('agOverlay').classList.remove('on'));
+$('agOverlay').addEventListener('click',function(e){
+  if(e.target===$('agOverlay')) $('agOverlay').classList.remove('on');
+  const d=e.target.getAttribute&&e.target.getAttribute('data-dur');
+  if(d){ AG_DUR=+d; markDur(); }
+});
+async function moveRowToAgendaTab(t){
+  const dest=findTab(TAB_AGENDA,/agenda/,null);
+  if(!dest) throw new Error('onglet « déjà dans agenda » introuvable — remplis TAB_AGENDA');
+  const d=await readTab(dest.title);
+  const dstH=(d.headers&&d.headers.length)?d.headers:SRC.headers;
+  const obj={}; SRC.headers.forEach(function(h,i){ if(h) obj[h]=(t.values[i]!=null?t.values[i]:''); });
+  const line=dstH.map(h=>h&&obj[h]!=null?obj[h]:'');
+  await sh('POST','/values/'+a1(dest.title,'A1')+':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS',{values:[line]});
+  await sh('POST',':batchUpdate',{requests:[{deleteDimension:{range:{sheetId:SRC.tab.sheetId,dimension:'ROWS',startIndex:t.rowIdx,endIndex:t.rowIdx+1}}}]});
+}
+async function doAgenda(){
+  const t=agTarget; if(!t) return;
+  const v=$('agWhen').value; if(!v){ toast('Choisis une date et une heure'); return; }
+  $('agGo').disabled=true;
+  try{
+    const s=new Date(v); const e=new Date(s.getTime()+AG_DUR*60000);
+    await gfetch('POST','/calendars/'+encodeURIComponent(PRIMARY)+'/events',{
+      summary:t.action,
+      description:[t.det,t.lien].filter(x=>String(x||'').trim()).join('\n'),
+      start:{dateTime:offISO(s),timeZone:'Europe/Paris'},
+      end:{dateTime:offISO(e),timeZone:'Europe/Paris'}
+    });
+    try{ await moveRowToAgendaTab(t); toast('📅 Dans l’agenda + ligne déplacée'); }
+    catch(err){ toast('📅 Dans l’agenda, mais Sheet : '+err.message); }
+    $('agOverlay').classList.remove('on');
+    await loadTodo(); await loadToday(true);
+  }catch(err){ toast('⚠️ '+err.message); }
+  $('agGo').disabled=false;
+}
+$('agGo').addEventListener('click',doAgenda);
+
+
+/* ================= ONGLETS ================= */
+const PANES=['today','mail','todo','perf','edito'];
+const TABTITLE={mail:'Mails',todo:'To-do website',perf:'Perfs de contenu',edito:'Édito'};
+const SUBLINE={
+  today:"Toute ta journée, tous tes agendas, en une page.",
+  mail:"Ce qui attend une réponse, dossier par dossier.",
+  todo:"Ta Sheet « EN COURS », de la plus urgente à la moins.",
+  perf:"", edito:""
+};
+let TAB=loadJSON('td_tab','today'); if(PANES.indexOf(TAB)<0) TAB='today';
+function setBadge(id,v){ const el=$(id); if(!el) return; el.textContent=(v==null||v===''||v===0)?'':String(v); }
+function dayTitle(){
+  const base=today||new Date();
+  const view=new Date(base.getFullYear(),base.getMonth(),base.getDate()+VIEW_OFFSET);
+  return VIEW_OFFSET===0?"Aujourd'hui":(VIEW_OFFSET===1?'Demain':(VIEW_OFFSET===-1?'Hier':capit(view.toLocaleDateString('fr-FR',{weekday:'long'}))));
+}
+function showTab(t){
+  if(PANES.indexOf(t)<0) t='today';
+  TAB=t; saveJSON('td_tab',t);
+  PANES.forEach(function(p){ const el=$('pane-'+p); if(el) el.hidden=(p!==t); });
+  document.querySelectorAll('.tabbtn').forEach(function(b){ b.classList.toggle('on',b.getAttribute('data-tab')===t); });
+  const day=(t==='today');
+  $('date').style.display=day?'block':'none';
+  $('navPrev').style.display=day?'inline-block':'none';
+  $('navNext').style.display=day?'inline-block':'none';
+  $('navToday').style.display=(day&&VIEW_OFFSET!==0)?'inline-block':'none';
+  $('h1title').textContent=day?dayTitle():TABTITLE[t];
+  const s=SUBLINE[t]||''; $('subline').textContent=s; $('subline').style.display=s?'block':'none';
+  window.scrollTo(0,0);
+}
+$('tabbar').addEventListener('click',function(e){
+  const b=e.target.closest&&e.target.closest('[data-tab]'); if(b) showTab(b.getAttribute('data-tab'));
+});
+
+/* ---- Vide-tête repliable ---- */
+let brainOpen=loadJSON('td_brainopen',false);
+function applyBrainOpen(){
+  $('brainHead').classList.toggle('open',brainOpen);
+  $('brainCard').style.display=brainOpen?'block':'none';
+}
+$('brainHead').addEventListener('click',function(){
+  brainOpen=!brainOpen; saveJSON('td_brainopen',brainOpen); applyBrainOpen();
+  if(brainOpen) $('bdText').focus();
+});
+applyBrainOpen();
+showTab(TAB);
+
+/* ---------- rafraîchissement ---------- */
+function loadExtras(){ loadMails(); loadTodo(); }
+
 let _tdStarted=false;
 function startApp(){
   document.getElementById('loginGate').classList.add('hidden');
-  if(_tdStarted){ loadToday(); return; } _tdStarted=true;
-  (async function(){ today=new Date(); todayStr=ymd(today); try{ await autoRollover(); }catch(e){} await loadToday(); setInterval(function(){ loadToday(true); },90000); })();
+  if(_tdStarted){ loadToday(); loadExtras(); return; } _tdStarted=true;
+  (async function(){ today=new Date(); todayStr=ymd(today); try{ await autoRollover(); }catch(e){} await loadToday(); loadExtras(); setInterval(function(){ loadToday(true); },90000); setInterval(loadExtras,300000); })();
 }
 function initGoogle(){
   if(!(window.google&&google.accounts&&google.accounts.oauth2)){ setTimeout(initGoogle,300); return; }
