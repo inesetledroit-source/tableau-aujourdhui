@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Aujourd'hui</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Aujourd'hui">
+<meta name="theme-color" content="#faf7f1">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root{ color-scheme: light; }
@@ -218,11 +222,13 @@ let ACCESS_TOKEN=null, tokenClient=null;
 function offISO(d){ const o=-d.getTimezoneOffset(); const s=o>=0?'+':'-'; const a=Math.abs(o); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds())+s+pad(Math.floor(a/60))+':'+pad(a%60); }
 function toOffsetISO(x){ if(x==null) return x; if(/([+\-]\d\d:?\d\d|Z)$/.test(x)) return x; return offISO(new Date(x)); }
 function mapEvent(e){ const conf=e.hangoutLink||(e.conferenceData&&e.conferenceData.entryPoints&&((e.conferenceData.entryPoints.find(p=>p.entryPointType==='video')||{}).uri))||''; return Object.assign({},e,{conferenceUrl:conf}); }
+function saveTok(resp){ try{ const exp=Date.now()+(((resp.expires_in|| 3600)-90)*1000); localStorage.setItem('td_gtok',JSON.stringify({t:resp.access_token,exp:exp})); }catch(e){} }
+function cachedTok(){ try{ const o=JSON.parse(localStorage.getItem('td_gtok')||'null'); if(o&&o.t&&o.exp>Date.now()) return o.t; }catch(e){} return null; }
 async function gfetch(method,path,body){
-  if(!ACCESS_TOKEN) throw new Error('non connecté');
-  const opt={method,headers:{'Authorization':'Bearer '+ACCESS_TOKEN,'Content-Type':'application/json'}}; if(body) opt.body=JSON.stringify(body);
-  const res=await fetch(GAPI+path,opt);
-  if(res.status===401){ ACCESS_TOKEN=null; showGate('Session Google expirée — reconnecte-toi.'); throw new Error('reconnexion nécessaire'); }
+  if(!ACCESS_TOKEN){ const c=cachedTok(); if(c) ACCESS_TOKEN=c; else throw new Error('non connecté'); }
+  const doFetch=()=>{ const opt={method,headers:{'Authorization':'Bearer '+ACCESS_TOKEN,'Content-Type':'application/json'}}; if(body) opt.body=JSON.stringify(body); return fetch(GAPI+path,opt); };
+  let res=await doFetch();
+  if(res.status===401){ localStorage.removeItem('td_gtok'); ACCESS_TOKEN=null; try{ await getToken(); res=await doFetch(); }catch(e){ showGate('Session Google expirée — reconnecte-toi.'); throw new Error('reconnexion nécessaire'); } }
   if(!res.ok){ let t=''; try{t=(await res.json()).error.message;}catch(e){} throw new Error('Google '+res.status+(t?' : '+t:'')); }
   return res.status===204?{}:res.json();
 }
@@ -246,7 +252,7 @@ async function mcp(name,args){
   }
   throw new Error('outil inconnu '+name);
 }
-function getToken(){ return new Promise((resolve,reject)=>{ if(!tokenClient){ reject(new Error('Google pas encore prêt, réessaie dans 2 s')); return; } tokenClient.callback=(resp)=>{ if(resp&&resp.access_token){ ACCESS_TOKEN=resp.access_token; resolve(resp); } else reject(new Error((resp&&resp.error)||'connexion refusée')); }; try{ tokenClient.requestAccessToken({prompt:''}); }catch(e){ reject(e); } }); }
+function getToken(){ return new Promise((resolve,reject)=>{ if(!tokenClient){ reject(new Error('Google pas encore prêt, réessaie dans 2 s')); return; } tokenClient.callback=(resp)=>{ if(resp&&resp.access_token){ ACCESS_TOKEN=resp.access_token; saveTok(resp); resolve(resp); } else reject(new Error((resp&&resp.error)||'connexion refusée')); }; try{ tokenClient.requestAccessToken({prompt:''}); }catch(e){ reject(e); } }); }
 function showGate(msg){ const g=document.getElementById('loginGate'); if(g){ g.classList.remove('hidden'); if(msg) document.getElementById('gErr').textContent=msg; } }
 function loadJSON(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}}
 function saveJSON(k,v){localStorage.setItem(k,JSON.stringify(v));}
@@ -578,6 +584,12 @@ document.getElementById('gBtn').addEventListener('click', async function(){
   try{ await getToken(); document.getElementById('gErr').textContent=''; startApp(); }
   catch(e){ document.getElementById('gErr').textContent='Connexion impossible : '+((e&&e.message)||e); }
 });
+// Reconnexion automatique : jeton mémorisé, sinon connexion silencieuse, sinon on montre le bouton.
+(function autoConnect(){
+  const c=cachedTok();
+  if(c){ ACCESS_TOKEN=c; startApp(); return; }
+  let n=0; (function waitSilent(){ if(!tokenClient){ if(n++<25){ setTimeout(waitSilent,300); } else showGate(''); return; } getToken().then(function(){ startApp(); }).catch(function(){ showGate(''); }); })();
+})();
 </script>
 </body>
 </html>
