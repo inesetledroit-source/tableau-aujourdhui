@@ -126,6 +126,10 @@
   .toast{ position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px); background:#2f2a22; color:#fff; padding:10px 16px; border-radius:12px; font-size:14px; opacity:0; transition:.2s; z-index:60; max-width:90%; text-align:center; }
   .toast.on{ opacity:1; transform:translateX(-50%) translateY(0); }
   .spin{ color:#a49c8c; font-size:14px; padding:10px 2px; }
+  .donesep{ font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#c2bbab; margin:14px 0 2px; padding-top:10px; border-top:1px dashed #ece8e0; }
+  .task.done{ opacity:.5; }
+  .task.done:hover{ opacity:1; }
+  .schip.on{ order:1; }
   /* ---- onglets ---- */
   .tabbar{ display:flex; gap:6px; margin:14px 0 2px; overflow-x:auto; padding-bottom:3px; scrollbar-width:none; }
   .tabbar::-webkit-scrollbar{ display:none; }
@@ -490,10 +494,11 @@ async function loadToday(silent){
 function render(){
   const byStart=(a,b)=>startMs(a)-startMs(b);
   const meetings=EVENTS.filter(e=>classify(e)==='meeting').sort(byStart);
-  const tasks=EVENTS.filter(e=>classify(e)==='task').sort(byStart);
+  const doneLast=(f)=>((a,b)=>((f(a)?1:0)-(f(b)?1:0))||startMs(a)-startMs(b));
+  const tasks=EVENTS.filter(e=>classify(e)==='task').sort(doneLast(isDone));
   const context=EVENTS.filter(e=>classify(e)==='context');
   const bdays=EVENTS.filter(e=>classify(e)==='birthday');
-  const health=EVENTS.filter(e=>classify(e)==='health').sort(byStart);
+  const health=EVENTS.filter(e=>classify(e)==='health').sort(doneLast(isHealthDone));
 
   // top boxes : anniversaires + contexte (toujours visibles)
   const seen=new Set(); const blist=[];
@@ -511,7 +516,9 @@ function render(){
   const dc=tasks.filter(isDone).length;
   $('progress').textContent=tasks.length?`${dc} / ${tasks.length} faites`:'';
   $('barfill').style.width=tasks.length?(100*dc/tasks.length)+'%':'0%';
+  let _sepPose=false;
   $('tasks').innerHTML = tasks.length? tasks.map(e=>`
+    ${(isDone(e)&&!_sepPose&&(_sepPose=true))?`<div class="donesep">✓ Faites (${dc})</div>`:''}
     <div class="task ${isDone(e)?'done':''}">
       <div class="box ${isDone(e)?'on':''}" data-act="toggle" data-id="${esc(e.id)}"></div>
       <div class="body"><div class="tt">${esc(displayTitle(e)||'(sans titre)')}</div><div class="meta">${esc(timeLabel(e))}</div>${linksHTML(e,false)}</div>
