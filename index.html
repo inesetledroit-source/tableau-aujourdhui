@@ -126,6 +126,8 @@
   .toast{ position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px); background:#2f2a22; color:#fff; padding:10px 16px; border-radius:12px; font-size:14px; opacity:0; transition:.2s; z-index:60; max-width:90%; text-align:center; }
   .toast.on{ opacity:1; transform:translateX(-50%) translateY(0); }
   .spin{ color:#a49c8c; font-size:14px; padding:10px 2px; }
+  .swap{ background:none; border:1px solid #e6e1d7; color:#b0a894; border-radius:8px; padding:3px 8px; font-size:11px; cursor:pointer; flex:0 0 auto; align-self:flex-start; white-space:nowrap; }
+  .swap:hover{ border-color:#c9c0ad; color:#6f6857; }
   .donesep{ font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#c2bbab; margin:14px 0 2px; padding-top:10px; border-top:1px dashed #ece8e0; }
   .task.done{ opacity:.5; }
   .task.done:hover{ opacity:1; }
@@ -367,8 +369,11 @@ function hasMeet(ev){ if(ev.conferenceUrl) return true; return /meet\.google\.|z
 function hasDoc(ev){ return /docs\.google|sheets\.google|drive\.google|canva\.|notion\.so|\.pdf(\b|$)/i.test((ev.description||'')+' '+(ev.location||'')); }
 const BOOKING_RE=/doctolib\.|calendly\.|keldoc\.|maiia\.|zocdoc\.|clicrdv\.|klara\.|sncf-connect|sncf\.com|thetrainline|trainline|ouigo|flixbus|blablacar|omio\.|airfrance|easyjet|ryanair|transavia/i;
 function hasBooking(ev){ return BOOKING_RE.test((ev.location||'')+' '+(ev.description||'')); }
-const RDV_PHRASE=/\brendez-?vous\b|\brdv\b|\bconsultation\b|\bm[ée]decin\b|\bdocteur\b|\bdentiste\b|\bpsy(chologue|chiatre)?\b|\bkin[ée]\b|\bchiro\w*|\bophtalmo\w*|\bdermato\w*|\bgyn[ée]co\w*|\bost[ée]o\w*|\bpodologue\b|\bcardiologue\b|\bprise de sang\b|\bgare\b|\ba[ée]roport\b|\btrain\b|\btgv\b|\beurostar\b|\bouigo\b/i;
+const RDV_PHRASE=/\brendez-?vous\b|\brdv\b|\bconsultation\b|\bm[ée]decin\b|\bdocteur\b|\bdentiste\b|\bpsy(chologue|chiatre)?\b|\bkin[ée]\b|\bchiro\w*|\bophtalmo\w*|\bdermato\w*|\bgyn[ée]co\w*|\bost[ée]o\w*|\bpodologue\b|\bcardiologue\b|\bmagn[ée]tiseur\b|\bsophrologue\b|\bnaturopathe\b|\bacupuncteur\b|\bhypnoth[ée]rapeute\b|\bEMDR\b|\borthodontiste\b|\borthophoniste\b|\borthoptiste\b|\bradiologue\b|\b[ée]chographie\b|\bIRM\b|\bv[ée]t[ée]rinaire\b|\bcoiffeur\b|\bcoiffure\b|\bost[ée]opathe\b|\bp[ée]dicure\b|\br[ée]servation\b|\bprise de sang\b|\bgare\b|\ba[ée]roport\b|\btrain\b|\btgv\b|\beurostar\b|\bouigo\b/i;
+function hasPlace(ev){ const l=String(ev.location||'').trim(); return !!l && !/^https?:\/\//i.test(l); }
+let forced=loadJSON('td_forced',{});
 function classify(ev){
+  if(forced[ev.id]==='meeting'||forced[ev.id]==='task') return forced[ev.id];
   if(ev._sante) return 'health';
   if(ev.eventType==='BIRTHDAY'||ev._anniv) return 'birthday';
   if(ev._holiday) return 'context';
@@ -381,8 +386,9 @@ function classify(ev){
   const hasAtt=Array.isArray(ev.attendees)&&ev.attendees.filter(a=>!a.self).length>0;
   if(hasAtt) return 'meeting';
   if(hasBooking(ev)) return 'meeting';
-  if(TASK_RE.test(s)) return 'task';
   if(APPT_RE.test(s)||RDV_PHRASE.test(s)) return 'meeting';
+  if(TASK_RE.test(s)) return 'task';
+  if(hasPlace(ev)) return 'meeting';
   if(hasMeet(ev)) return 'meeting';
   if(hasDoc(ev)) return 'task';
   return 'task';
@@ -508,7 +514,8 @@ function render(){
   $('c-meet').textContent=meetings.length;
   $('meetings').innerHTML = meetings.length? meetings.map(e=>`
     <div class="meet"><div class="t">${esc(timeLabel(e))}</div>
-      <div class="body"><div class="n">${esc(e.summary||'(sans titre)')}</div>${linksHTML(e,true)}</div></div>`).join('')
+      <div class="body"><div class="n">${esc(e.summary||'(sans titre)')}</div>${linksHTML(e,true)}</div>
+      <button class="swap" data-swap="task" data-id="${esc(e.id)}" title="Ce n'est pas un rendez-vous, c'est une tâche">↓ tâche</button></div>`).join('')
     : '<div class="empty">Aucun rendez-vous aujourd\'hui 🙌</div>';
 
   $('c-task').textContent=tasks.length;
@@ -521,7 +528,7 @@ function render(){
     <div class="task ${isDone(e)?'done':''}">
       <div class="box ${isDone(e)?'on':''}" data-act="toggle" data-id="${esc(e.id)}"></div>
       <div class="body"><div class="tt">${esc(displayTitle(e)||'(sans titre)')}</div><div class="meta">${esc(timeLabel(e))}</div>${linksHTML(e,false)}</div>
-      <div class="acts"><button class="later ai" data-act="copy" data-id="${esc(e.id)}">📋 Copier</button>${e.start&&e.start.dateTime?`<button class="later" data-act="shift" data-id="${esc(e.id)}">⏱ décaler</button>`:''}<button class="later" data-act="later" data-id="${esc(e.id)}">↪ demain</button></div></div>`).join('')
+      <div class="acts"><button class="later ai" data-act="copy" data-id="${esc(e.id)}">📋 Copier</button>${e.start&&e.start.dateTime?`<button class="later" data-act="shift" data-id="${esc(e.id)}">⏱ décaler</button>`:''}<button class="later" data-act="later" data-id="${esc(e.id)}">↪ demain</button><button class="later" data-act="tomeet" data-id="${esc(e.id)}">↑ RDV</button></div></div>`).join('')
     : '<div class="empty">Rien de bloqué aujourd\'hui. Profite, ou pioche une tâche dans ta Sheet 🙂</div>';
   $('closeDay').style.display=(tasks.length&&VIEW_OFFSET===0)?'block':'none';
 
@@ -535,6 +542,16 @@ $('tasks').addEventListener('click',e=>{
   else if(el.getAttribute('data-act')==='later'){ doRollover([ev]); }
   else if(el.getAttribute('data-act')==='shift'){ openShift(ev); }
   else if(el.getAttribute('data-act')==='copy'){ copyTask(ev); }
+  else if(el.getAttribute('data-act')==='tomeet'){ setForced(ev,'meeting'); }
+});
+function setForced(ev,cat){
+  if(cat) forced[ev.id]=cat; else delete forced[ev.id];
+  saveJSON('td_forced',forced); render();
+  toast(cat==='meeting'?'Rangé dans les rendez-vous':'Rangé dans les tâches');
+}
+$('meetings').addEventListener('click',function(e){
+  const el=e.target.closest&&e.target.closest('[data-swap]'); if(!el) return;
+  const ev=EVENTS.find(x=>x.id===el.getAttribute('data-id')); if(ev) setForced(ev,'task');
 });
 function nextDT(iso){ const [dp,rest]=iso.split('T'); const d=new Date(dp+'T00:00:00'); d.setDate(d.getDate()+1); return ymd(d)+'T'+rest; }
 function nextD(dstr){ dstr=(dstr||'').slice(0,10); const d=new Date(dstr+'T00:00:00'); d.setDate(d.getDate()+1); return ymd(d); }
