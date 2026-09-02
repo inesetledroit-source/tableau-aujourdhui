@@ -129,7 +129,6 @@
   .donesep{ font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#c2bbab; margin:14px 0 2px; padding-top:10px; border-top:1px dashed #ece8e0; }
   .task.done{ opacity:.5; }
   .task.done:hover{ opacity:1; }
-  .schip.on{ order:1; }
   /* ---- onglets ---- */
   .tabbar{ display:flex; gap:6px; margin:14px 0 2px; overflow-x:auto; padding-bottom:3px; scrollbar-width:none; }
   .tabbar::-webkit-scrollbar{ display:none; }
@@ -498,7 +497,7 @@ function render(){
   const tasks=EVENTS.filter(e=>classify(e)==='task').sort(doneLast(isDone));
   const context=EVENTS.filter(e=>classify(e)==='context');
   const bdays=EVENTS.filter(e=>classify(e)==='birthday');
-  const health=EVENTS.filter(e=>classify(e)==='health').sort(doneLast(isHealthDone));
+  const health=EVENTS.filter(e=>classify(e)==='health').sort(byStart);
 
   // top boxes : anniversaires + contexte (toujours visibles)
   const seen=new Set(); const blist=[];
