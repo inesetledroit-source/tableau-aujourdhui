@@ -946,10 +946,11 @@ $('agGo').addEventListener('click',doAgenda);
 
 
 /* ================= MINUTEUR DE JOURNÉE ================= */
-const CAP = 4*3600;              // plafond : 4h
+const CAP = 4*3600;              // plafond normal : 4h
+const CAP_MAX = 4.5*3600;        // limite absolue : 4h30
 const CAP_WARN = 3.75*3600;      // alerte à 3h45
-const H_VIDE_TETE = '17:15';
-const H_FIN = '17:30';
+const H_VIDE_TETE = '17:30';     // les 4h sont finies -> vide-tête (en plus)
+const H_FIN = '17:45';           // fin du vide-tête -> récupération
 const DUREE_DEFAUT = 30*60;      // si la tâche n'a pas de durée
 
 function jourCourant(){ return ymd(new Date()); }
@@ -1025,8 +1026,9 @@ function majBandeau(){
   c.classList.toggle('over', t>=CAP);
   const ev = TIMER.enCours ? EVENTS.filter(x=>x.id===TIMER.enCours)[0] : null;
   $('dayTask').textContent = ev ? ('▶ '+displayTitle(ev)) : '';
-  $('dayHint').textContent = t>=CAP ? 'Tu as atteint tes 4 h. Arrête-toi ici.'
-    : (t>=CAP_WARN ? 'Plus que '+hms(CAP-t)+' avant ton plafond.' : '');
+  $('dayHint').textContent = t>=CAP_MAX ? '4h30. C\'est ta limite absolue. Tu fermes.'
+    : (t>=CAP ? 'Tes 4 h sont faites. Tu ne continues que si la journée l\'exige — 4h30 grand maximum.'
+    : (t>=CAP_WARN ? 'Plus que '+hms(CAP-t)+' avant tes 4 h.' : ''));
 }
 function majChips(){
   document.querySelectorAll('[data-chrono]').forEach(function(el){
@@ -1041,19 +1043,23 @@ function majChips(){
 function verifAlarmes(){
   const n=new Date(), hhmm=pad(n.getHours())+':'+pad(n.getMinutes());
   if(hhmm===H_VIDE_TETE && !TIMER.alertes.vt){
-    TIMER.alertes.vt=1; saveTimer(); bip(3);
-    notifier('⏰ Vide-tête','Note tout ce qui te vient. Tu ne traites rien.');
+    TIMER.alertes.vt=1; saveTimer(); stopChrono(); bip(3);
+    notifier('⏰ Vide-tête — tes 4 h sont finies','Note tout ce qui te vient. Tu ne traites rien.');
     showTab('today'); brainOpen=true; saveJSON('td_brainopen',true); applyBrainOpen();
     try{ $('bdText').focus(); }catch(e){}
   }
   if(hhmm===H_FIN && !TIMER.alertes.fin){
     TIMER.alertes.fin=1; saveTimer(); stopChrono(); bip(4);
-    notifier('🌿 17h30 — fin de journée','Tu fermes. Balade, musique.'); render();
+    notifier('🌿 17h45 — tu fermes','Récupération : musique, repos, ce que tu veux.'); render();
   }
   const t=totalJour();
   if(t>=CAP && !TIMER.alertes.cap){
-    TIMER.alertes.cap=1; saveTimer(); bip(4);
-    notifier('🛑 4 heures atteintes','C\'est ton plafond. Stoppe ici.');
+    TIMER.alertes.cap=1; saveTimer(); bip(3);
+    notifier('🛑 4 heures faites','Tu ne continues que si la journée l\'exige. 4h30 grand maximum.');
+  }
+  if(t>=CAP_MAX && !TIMER.alertes.capmax){
+    TIMER.alertes.capmax=1; saveTimer(); stopChrono(); bip(5);
+    notifier('🛑 4h30 — limite absolue','Tu fermes maintenant.'); render();
   }
   if(TIMER.enCours){
     const ev=EVENTS.filter(x=>x.id===TIMER.enCours)[0];
