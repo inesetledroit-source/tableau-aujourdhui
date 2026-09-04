@@ -255,6 +255,7 @@
         </div>
         <div class="bd-hint">Tape ton idée puis clique une catégorie (Entrée = Note). « Copier le lot » copie tout le Général (ou Website) d'un coup à coller dans ta Sheet.</div>
         <div id="bdList"></div>
+        <button class="btn btn-primary" id="vtOpen">📅 Programmer tout ça dans ma prochaine journée</button>
       </div>
     </div>
   </section>
@@ -306,6 +307,12 @@
   <textarea id="aiQ" class="aiq" placeholder="Qu'est-ce que je fais pour toi ? (ex : raccourcis ce script + applique les modifs indiquées). Vide = je m'occupe de la tâche au mieux."></textarea>
   <div class="mactions"><button class="btn btn-ghost" id="aiCancel">Fermer</button><button class="btn btn-go" id="aiAsk">Envoyer à Claude</button></div>
   <div id="aiOut" class="aiout"></div>
+</div></div>
+<div class="overlay" id="vtOverlay"><div class="modal">
+  <h3>📅 Programmer dans ta prochaine journée</h3>
+  <p>Ces idées deviendront des tâches le <b id="vtDate"></b>, posées dans tes blocs de travail (30 min chacune). Décoche ce que tu ne veux pas programmer.</p>
+  <div id="vtList"></div>
+  <div class="mactions"><button class="btn btn-ghost" id="vtCancel">Annuler</button><button class="btn btn-go" id="vtGo">Programmer</button></div>
 </div></div>
 <div class="overlay" id="agOverlay"><div class="modal">
   <h3>📅 Mettre dans l'agenda</h3>
@@ -455,6 +462,13 @@ function renderSante(health){
 async function toggleDone(ev){
   if(TIMER.enCours===ev.id) stopChrono();
   const cur=ev.summary||''; const nowDone=/^✅/.test(cur);
+  if(!nowDone){
+    // on la coche : si le chrono n'a rien mesuré, on compte quand même la durée prévue
+    if(!TIMER.passe[ev.id]){ TIMER.passe[ev.id]=alloue(ev); TIMER.auto[ev.id]=1; saveTimer(); }
+  } else {
+    // on la décoche : on retire le temps s'il avait été compté d'office
+    if(TIMER.auto[ev.id]){ delete TIMER.passe[ev.id]; delete TIMER.auto[ev.id]; saveTimer(); }
+  }
   const newTitle= nowDone ? cur.replace(/^✅\s*/,'') : '✅ '+cur;
   ev.summary=newTitle; render();
   try{ await mcp(UPDATE_TOOL,{calendarId:ev._cal||PRIMARY,eventId:ev.id,summary:newTitle}); }
@@ -955,7 +969,8 @@ const DUREE_DEFAUT = 30*60;      // si la tâche n'a pas de durée
 
 function jourCourant(){ return ymd(new Date()); }
 let TIMER = loadJSON('td_timer', null);
-if(!TIMER || TIMER.jour !== jourCourant()) TIMER = {jour:jourCourant(), enCours:null, depuis:0, passe:{}, alertes:{}};
+if(!TIMER || TIMER.jour !== jourCourant()) TIMER = {jour:jourCourant(), enCours:null, depuis:0, passe:{}, alertes:{}, auto:{}};
+TIMER.auto = TIMER.auto || {};
 function saveTimer(){ saveJSON('td_timer', TIMER); }
 
 function ecoule(id){
@@ -1035,7 +1050,8 @@ function majChips(){
     const id=el.getAttribute('data-chrono');
     const ev=EVENTS.filter(x=>x.id===id)[0]; if(!ev) return;
     const e=ecoule(id), a=alloue(ev);
-    el.textContent = mmss(e)+' / '+mmss(a);
+    el.textContent = (TIMER.auto[id]?'~':'')+mmss(e)+' / '+mmss(a);
+    el.title = TIMER.auto[id] ? 'Durée prévue, comptée d\u2019office : tu n\u2019as pas lancé le chrono' : 'Temps réellement mesuré';
     el.classList.toggle('depasse', e>a);
     el.classList.toggle('actif', TIMER.enCours===id);
   });
@@ -1050,9 +1066,13 @@ function verifAlarmes(){
   }
   if(hhmm===H_FIN && !TIMER.alertes.fin){
     TIMER.alertes.fin=1; saveTimer(); stopChrono(); bip(4);
-    notifier('🌿 17h45 — tu fermes','Récupération : musique, repos, ce que tu veux.'); render();
+    notifier('🌿 17h45 — tu fermes','Programme ton vide-tête pour demain, puis récupération.'); render();
   }
   const t=totalJour();
+  if(t>=CAP_WARN && t<CAP && !TIMER.alertes.warn){
+    TIMER.alertes.warn=1; saveTimer(); bip(2);
+    notifier('\u23f3 3h45 \u2014 plus que 15 min', 'Commence \u00e0 refermer. Ne lance rien de neuf.');
+  }
   if(t>=CAP && !TIMER.alertes.cap){
     TIMER.alertes.cap=1; saveTimer(); bip(3);
     notifier('🛑 4 heures faites','Tu ne continues que si la journée l\'exige. 4h30 grand maximum.');
@@ -1070,10 +1090,65 @@ function verifAlarmes(){
   }
 }
 function tic(){
-  if(TIMER.jour!==jourCourant()){ TIMER={jour:jourCourant(),enCours:null,depuis:0,passe:{},alertes:{}}; saveTimer(); }
+  if(TIMER.jour!==jourCourant()){ TIMER={jour:jourCourant(),enCours:null,depuis:0,passe:{},alertes:{},auto:{}}; saveTimer(); }
   majBandeau(); majChips(); verifAlarmes();
 }
 setInterval(tic,1000);
+
+/* ========= VIDE-TÊTE → TÂCHES DE LA PROCHAINE JOURNÉE ========= */
+const CRENEAUX = ['12:30','13:00','13:30','14:00','15:30','16:00','16:30','17:00'];
+
+function prochainJourOuvre(){
+  const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()+1);
+  while(d.getDay()===0 || d.getDay()===6) d.setDate(d.getDate()+1);
+  return d;
+}
+function ouvrirVT(){
+  if(!brain.length){ toast('Ton vide-tête est vide'); return; }
+  const d=prochainJourOuvre();
+  $('vtDate').textContent = d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+  $('vtList').innerHTML = brain.map(function(b,i){
+    return '<label class="mrow"><input type="checkbox" '+(i<CRENEAUX.length?'checked':'')+' data-vt="'+esc(b.id)+'">'
+      +'<span class="mt">'+esc(b.text)+'</span><span class="mtime">'+esc(b.tag)+'</span></label>';
+  }).join('');
+  $('vtOverlay').classList.add('on');
+}
+async function envoyerVT(){
+  const ids=[].slice.call($('vtList').querySelectorAll('input:checked')).map(function(i){return i.getAttribute('data-vt');});
+  if(!ids.length){ $('vtOverlay').classList.remove('on'); return; }
+  const choisis = brain.filter(function(b){ return ids.indexOf(b.id)>=0; });
+  const aPlacer = choisis.slice(0, CRENEAUX.length);
+  const reste = choisis.length - aPlacer.length;
+  $('vtGo').disabled=true;
+  const jour = ymd(prochainJourOuvre());
+  let ok=0, rate=0;
+  for(let i=0;i<aPlacer.length;i++){
+    const hm=CRENEAUX[i].split(':');
+    const debut=new Date(Date.parse(jour+'T'+hm[0]+':'+hm[1]+':00'));
+    const fin=new Date(debut.getTime()+30*60000);
+    try{
+      await gfetch('POST','/calendars/'+encodeURIComponent(PRIMARY)+'/events',{
+        summary: aPlacer[i].text,
+        description: 'Sorti de ton vide-tête du '+new Date().toLocaleDateString('fr-FR')+' ('+aPlacer[i].tag+')',
+        start:{dateTime:offISO(debut),timeZone:'Europe/Paris'},
+        end:{dateTime:offISO(fin),timeZone:'Europe/Paris'}
+      });
+      brain = brain.filter(function(b){ return b.id!==aPlacer[i].id; });
+      ok++;
+    }catch(e){ rate++; }
+  }
+  saveJSON('td_brain',brain); renderBrain();
+  $('vtOverlay').classList.remove('on'); $('vtGo').disabled=false;
+  let msg = ok+' tâche'+(ok>1?'s':'')+' programmée'+(ok>1?'s':'');
+  if(reste>0) msg += ' — '+reste+' gardée'+(reste>1?'s':'')+' au chaud, la journée est pleine';
+  if(rate>0) msg += ' — '+rate+' en échec';
+  toast(msg);
+  try{ await loadToday(true); }catch(e){}
+}
+$('vtOpen').addEventListener('click',ouvrirVT);
+$('vtCancel').addEventListener('click',function(){ $('vtOverlay').classList.remove('on'); });
+$('vtOverlay').addEventListener('click',function(e){ if(e.target===$('vtOverlay')) $('vtOverlay').classList.remove('on'); });
+$('vtGo').addEventListener('click',envoyerVT);
 
 /* ================= ONGLETS ================= */
 const PANES=['today','mail','todo','perf','edito'];
