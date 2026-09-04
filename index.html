@@ -290,8 +290,8 @@
 </div>
 
 <div class="overlay" id="overlay"><div class="modal">
-  <h3>Reporter à demain</h3>
-  <p>Ces blocs non cochés seront <b>déplacés à demain</b>. Décoche ce que tu veux laisser aujourd'hui (ex : un vrai rendez-vous).</p>
+  <h3>Reporter les non-faits</h3>
+  <p>Ton <b>travail</b> part au prochain jour ouvré, ton <b>perso</b> à demain même le week-end. Décoche ce que tu veux laisser ici.</p>
   <div id="mlist"></div>
   <div class="mactions"><button class="btn btn-ghost" id="mCancel">Annuler</button><button class="btn btn-go" id="mConfirm">Reporter</button></div>
 </div></div>
@@ -568,7 +568,7 @@ function render(){
     <div class="task ${isDone(e)?'done':''}">
       <div class="box ${isDone(e)?'on':''}" data-act="toggle" data-id="${esc(e.id)}"></div>
       <div class="body"><div class="tt">${esc(displayTitle(e)||'(sans titre)')}</div><div class="meta">${esc(timeLabel(e))}<span class="chrono" data-chrono="${esc(e.id)}"></span></div>${linksHTML(e,false)}</div>
-      <div class="acts"><button class="later go ${TIMER.enCours===e.id?'on':''}" data-act="chrono" data-id="${esc(e.id)}">${TIMER.enCours===e.id?'⏸ pause':'▶ go'}</button><button class="later ai" data-act="copy" data-id="${esc(e.id)}">📋 Copier</button>${e.start&&e.start.dateTime?`<button class="later" data-act="shift" data-id="${esc(e.id)}">⏱ décaler</button>`:''}<button class="later" data-act="later" data-id="${esc(e.id)}">↪ demain</button><button class="later" data-act="tomeet" data-id="${esc(e.id)}">↑ RDV</button></div></div>`).join('')
+      <div class="acts"><button class="later go ${TIMER.enCours===e.id?'on':''}" data-act="chrono" data-id="${esc(e.id)}">${TIMER.enCours===e.id?'⏸ pause':'▶ go'}</button><button class="later ai" data-act="copy" data-id="${esc(e.id)}">📋 Copier</button>${e.start&&e.start.dateTime?`<button class="later" data-act="shift" data-id="${esc(e.id)}">⏱ décaler</button>`:''}<button class="later" data-act="later" data-id="${esc(e.id)}">↪ reporter</button><button class="later" data-act="tomeet" data-id="${esc(e.id)}">↑ RDV</button></div></div>`).join('')
     : '<div class="empty">Rien de bloqué aujourd\'hui. Profite, ou pioche une tâche dans ta Sheet 🙂</div>';
   $('closeDay').style.display=(tasks.length&&VIEW_OFFSET===0)?'block':'none';
 
@@ -594,8 +594,26 @@ $('meetings').addEventListener('click',function(e){
   const el=e.target.closest&&e.target.closest('[data-swap]'); if(!el) return;
   const ev=EVENTS.find(x=>x.id===el.getAttribute('data-id')); if(ev) setForced(ev,'task');
 });
-function nextDT(iso){ const [dp,rest]=iso.split('T'); const d=new Date(dp+'T00:00:00'); d.setDate(d.getDate()+1); return ymd(d)+'T'+rest; }
-function nextD(dstr){ dstr=(dstr||'').slice(0,10); const d=new Date(dstr+'T00:00:00'); d.setDate(d.getDate()+1); return ymd(d); }
+function plusDT(iso,n){ const p=iso.split('T'); const d=new Date(p[0]+'T00:00:00'); d.setDate(d.getDate()+n); return ymd(d)+'T'+p[1]; }
+function plusD(dstr,n){ dstr=(dstr||'').slice(0,10); const d=new Date(dstr+'T00:00:00'); d.setDate(d.getDate()+n); return ymd(d); }
+function nextDT(iso){ return plusDT(iso,1); }
+function nextD(dstr){ return plusD(dstr,1); }
+/* Perso : on reporte à demain, week-end compris. Pro : au prochain jour ouvré. */
+const CAL_PERSO='90d16798804ca3f881b93ceb429a271961560b5588a8dce62271ca03c7552425@group.calendar.google.com';
+function estPerso(ev){ return (ev._cal||'')===CAL_PERSO; }
+function dateReport(ev){
+  const d=new Date(startMs(ev)); d.setHours(0,0,0,0); d.setDate(d.getDate()+1);
+  if(!estPerso(ev)){ while(d.getDay()===0||d.getDay()===6) d.setDate(d.getDate()+1); }
+  return d;
+}
+function joursReport(ev){
+  const dep=new Date(startMs(ev)); dep.setHours(0,0,0,0);
+  return Math.round((dateReport(ev)-dep)/86400000);
+}
+function libelleReport(ev){
+  return dateReport(ev).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'})
+    + (estPerso(ev)?' · perso':' · pro');
+}
 function localISO(dstr){ dstr=(dstr||'').slice(0,10); const d=new Date(dstr+'T00:00:00'); const o=-d.getTimezoneOffset(); const s=o>=0?'+':'-'; const a=Math.abs(o); return dstr+'T00:00:00'+s+pad(Math.floor(a/60))+':'+pad(a%60); }
 function addMinISO(iso,mins){ const m=iso.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(.*)$/); if(!m) return iso; const off=m[7]; let d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6])); d=new Date(d.getTime()+mins*60000); const p=n=>String(n).padStart(2,'0'); return d.getUTCFullYear()+'-'+p(d.getUTCMonth()+1)+'-'+p(d.getUTCDate())+'T'+p(d.getUTCHours())+':'+p(d.getUTCMinutes())+':'+p(d.getUTCSeconds())+off; }
 let shiftTarget=null;
@@ -646,22 +664,23 @@ $('aiCancel').addEventListener('click',()=>$('aiOverlay').classList.remove('on')
 $('aiOverlay').addEventListener('click',e=>{ if(e.target===$('aiOverlay'))$('aiOverlay').classList.remove('on'); });
 $('aiAsk').addEventListener('click',requestClaude);
 async function moveOne(ev){
+  const n=joursReport(ev);
   let args={calendarId:ev._cal||PRIMARY,eventId:ev.id};
-  if(ev.start&&ev.start.dateTime){ args.startTime=nextDT(ev.start.dateTime); args.endTime=ev.end&&ev.end.dateTime?nextDT(ev.end.dateTime):args.startTime; }
-  else { args.allDay=true; args.timeZone='Europe/Paris'; args.startTime=localISO(nextD(ev.start.date)); args.endTime=localISO(nextD((ev.end&&ev.end.date)||ev.start.date)); }
+  if(ev.start&&ev.start.dateTime){ args.startTime=plusDT(ev.start.dateTime,n); args.endTime=ev.end&&ev.end.dateTime?plusDT(ev.end.dateTime,n):args.startTime; }
+  else { args.allDay=true; args.timeZone='Europe/Paris'; args.startTime=localISO(plusD(ev.start.date,n)); args.endTime=localISO(plusD((ev.end&&ev.end.date)||ev.start.date,n)); }
   await mcp(UPDATE_TOOL,args);
 }
 async function doRollover(list){
   if(!list.length)return; $('closeDay').disabled=true;
   try{ for(const ev of list){ await moveOne(ev); }
-    toast(list.length>1?`${list.length} blocs reportés à demain`:'Reporté à demain'); await loadToday();
+    toast(list.length>1?`${list.length} blocs reportés`:'Reporté'); await loadToday();
   }catch(err){ toast('⚠️ '+err.message); }
   $('closeDay').disabled=false;
 }
 $('closeDay').addEventListener('click',()=>{
   const undone=EVENTS.filter(e=>classify(e)==='task'&&!isDone(e));
   if(!undone.length){ toast('Tout est coché, bravo 🎉'); return; }
-  $('mlist').innerHTML=undone.map(e=>`<label class="mrow"><input type="checkbox" checked data-id="${esc(e.id)}"><span class="mt">${esc(e.summary||'(sans titre)')}</span><span class="mtime">${esc(timeLabel(e))}</span></label>`).join('');
+  $('mlist').innerHTML=undone.map(e=>`<label class="mrow"><input type="checkbox" checked data-id="${esc(e.id)}"><span class="mt">${esc(e.summary||'(sans titre)')}</span><span class="mtime">→ ${esc(libelleReport(e))}</span></label>`).join('');
   $('overlay').classList.add('on');
 });
 $('mCancel').addEventListener('click',()=>$('overlay').classList.remove('on'));
