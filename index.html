@@ -128,6 +128,26 @@
   .spin{ color:#a49c8c; font-size:14px; padding:10px 2px; }
   .swap{ background:none; border:1px solid #e6e1d7; color:#b0a894; border-radius:8px; padding:3px 8px; font-size:11px; cursor:pointer; flex:0 0 auto; align-self:flex-start; white-space:nowrap; }
   .swap:hover{ border-color:#c9c0ad; color:#6f6857; }
+  .daycard{ background:#fff; border:1px solid #ece8e0; border-radius:14px; padding:12px 16px; margin:14px 0 4px; box-shadow:0 1px 2px rgba(0,0,0,.03); }
+  .daycard.warn{ border-color:#f0dcc9; background:#fdf8f2; }
+  .daycard.over{ border-color:#f2c9c4; background:#fdf1f0; }
+  .dayline{ display:flex; align-items:baseline; gap:9px; }
+  .dayico{ font-size:15px; }
+  .daytxt{ font-size:15px; font-weight:800; color:#4a4438; font-variant-numeric:tabular-nums; }
+  .daycard.over .daytxt{ color:#b5443a; }
+  .daytask{ font-size:12.5px; color:#7bab6a; font-weight:600; margin-left:auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:52%; }
+  .daybar{ height:7px; background:#ece8e0; border-radius:20px; overflow:hidden; margin-top:9px; }
+  .daybar > i{ display:block; height:100%; width:0; background:#5fae86; transition:width .4s; }
+  .daycard.warn .daybar > i{ background:#d9a05b; }
+  .daycard.over .daybar > i{ background:#c4675c; }
+  .dayhint{ font-size:12px; color:#a5683a; margin-top:7px; }
+  .daycard.over .dayhint{ color:#b5443a; font-weight:600; }
+  .dayhint:empty{ display:none; }
+  .chrono{ display:inline-block; margin-left:7px; font-variant-numeric:tabular-nums; font-size:11px; font-weight:700; background:#f1efe9; color:#8a8375; border-radius:10px; padding:1px 7px; }
+  .chrono.actif{ background:#eef3ec; color:#4d7b40; }
+  .chrono.depasse{ background:#fdeceb; color:#b5443a; }
+  .later.go{ border-color:#cfe0c6; background:#f2f7f0; color:#4d7b40; font-weight:700; }
+  .later.go.on{ background:#5fae86; border-color:#5fae86; color:#fff; }
   .donesep{ font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#c2bbab; margin:14px 0 2px; padding-top:10px; border-top:1px dashed #ece8e0; }
   .task.done{ opacity:.5; }
   .task.done:hover{ opacity:1; }
@@ -200,6 +220,11 @@
 
   <!-- ============ ONGLET AUJOURD'HUI ============ -->
   <section class="pane" id="pane-today">
+    <div class="daycard" id="daycard">
+      <div class="dayline"><span class="dayico">⏱</span><span class="daytxt" id="dayTxt">0 min / 4h00</span><span class="daytask" id="dayTask"></span></div>
+      <div class="daybar"><i id="dayFill"></i></div>
+      <div class="dayhint" id="dayHint"></div>
+    </div>
     <div id="status" class="spin">Chargement de ta journée…</div>
     <div id="content" style="display:none">
 
@@ -428,6 +453,7 @@ function renderSante(health){
   $('sante').style.display=santeOpen?'block':'none';
 }
 async function toggleDone(ev){
+  if(TIMER.enCours===ev.id) stopChrono();
   const cur=ev.summary||''; const nowDone=/^✅/.test(cur);
   const newTitle= nowDone ? cur.replace(/^✅\s*/,'') : '✅ '+cur;
   ev.summary=newTitle; render();
@@ -527,8 +553,8 @@ function render(){
     ${(isDone(e)&&!_sepPose&&(_sepPose=true))?`<div class="donesep">✓ Faites (${dc})</div>`:''}
     <div class="task ${isDone(e)?'done':''}">
       <div class="box ${isDone(e)?'on':''}" data-act="toggle" data-id="${esc(e.id)}"></div>
-      <div class="body"><div class="tt">${esc(displayTitle(e)||'(sans titre)')}</div><div class="meta">${esc(timeLabel(e))}</div>${linksHTML(e,false)}</div>
-      <div class="acts"><button class="later ai" data-act="copy" data-id="${esc(e.id)}">📋 Copier</button>${e.start&&e.start.dateTime?`<button class="later" data-act="shift" data-id="${esc(e.id)}">⏱ décaler</button>`:''}<button class="later" data-act="later" data-id="${esc(e.id)}">↪ demain</button><button class="later" data-act="tomeet" data-id="${esc(e.id)}">↑ RDV</button></div></div>`).join('')
+      <div class="body"><div class="tt">${esc(displayTitle(e)||'(sans titre)')}</div><div class="meta">${esc(timeLabel(e))}<span class="chrono" data-chrono="${esc(e.id)}"></span></div>${linksHTML(e,false)}</div>
+      <div class="acts"><button class="later go ${TIMER.enCours===e.id?'on':''}" data-act="chrono" data-id="${esc(e.id)}">${TIMER.enCours===e.id?'⏸ pause':'▶ go'}</button><button class="later ai" data-act="copy" data-id="${esc(e.id)}">📋 Copier</button>${e.start&&e.start.dateTime?`<button class="later" data-act="shift" data-id="${esc(e.id)}">⏱ décaler</button>`:''}<button class="later" data-act="later" data-id="${esc(e.id)}">↪ demain</button><button class="later" data-act="tomeet" data-id="${esc(e.id)}">↑ RDV</button></div></div>`).join('')
     : '<div class="empty">Rien de bloqué aujourd\'hui. Profite, ou pioche une tâche dans ta Sheet 🙂</div>';
   $('closeDay').style.display=(tasks.length&&VIEW_OFFSET===0)?'block':'none';
 
@@ -543,6 +569,7 @@ $('tasks').addEventListener('click',e=>{
   else if(el.getAttribute('data-act')==='shift'){ openShift(ev); }
   else if(el.getAttribute('data-act')==='copy'){ copyTask(ev); }
   else if(el.getAttribute('data-act')==='tomeet'){ setForced(ev,'meeting'); }
+  else if(el.getAttribute('data-act')==='chrono'){ chrono(ev.id); }
 });
 function setForced(ev,cat){
   if(cat) forced[ev.id]=cat; else delete forced[ev.id];
@@ -917,6 +944,130 @@ async function doAgenda(){
 }
 $('agGo').addEventListener('click',doAgenda);
 
+
+/* ================= MINUTEUR DE JOURNÉE ================= */
+const CAP = 4*3600;              // plafond : 4h
+const CAP_WARN = 3.75*3600;      // alerte à 3h45
+const H_VIDE_TETE = '17:15';
+const H_FIN = '17:30';
+const DUREE_DEFAUT = 30*60;      // si la tâche n'a pas de durée
+
+function jourCourant(){ return ymd(new Date()); }
+let TIMER = loadJSON('td_timer', null);
+if(!TIMER || TIMER.jour !== jourCourant()) TIMER = {jour:jourCourant(), enCours:null, depuis:0, passe:{}, alertes:{}};
+function saveTimer(){ saveJSON('td_timer', TIMER); }
+
+function ecoule(id){
+  let s = TIMER.passe[id] || 0;
+  if(TIMER.enCours === id) s += Math.floor((Date.now()-TIMER.depuis)/1000);
+  return s;
+}
+function totalJour(){
+  let s = 0;
+  for(const k in TIMER.passe) s += TIMER.passe[k];
+  if(TIMER.enCours) s += Math.floor((Date.now()-TIMER.depuis)/1000);
+  return s;
+}
+function alloue(ev){
+  if(ev && ev.start && ev.start.dateTime && ev.end && ev.end.dateTime){
+    const d = (Date.parse(ev.end.dateTime)-Date.parse(ev.start.dateTime))/1000;
+    if(d>0) return d;
+  }
+  return DUREE_DEFAUT;
+}
+function hms(s){ s=Math.max(0,Math.round(s)); const h=Math.floor(s/3600), m=Math.floor((s%3600)/60);
+  return h? (h+'h'+pad(m)) : (m+' min'); }
+function mmss(s){ s=Math.max(0,Math.round(s)); return pad(Math.floor(s/60))+':'+pad(s%60); }
+
+/* ---- son + notification ---- */
+let AUDIO=null;
+function bip(n){
+  try{
+    if(!AUDIO) AUDIO=new (window.AudioContext||window.webkitAudioContext)();
+    if(AUDIO.state==='suspended') AUDIO.resume();
+    for(let i=0;i<(n||1);i++){
+      const o=AUDIO.createOscillator(), g=AUDIO.createGain(), t=AUDIO.currentTime+i*0.45;
+      o.frequency.setValueAtTime(880,t);
+      g.gain.setValueAtTime(0.0001,t);
+      g.gain.exponentialRampToValueAtTime(0.25,t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+0.35);
+      o.connect(g); g.connect(AUDIO.destination); o.start(t); o.stop(t+0.42);
+    }
+  }catch(e){}
+}
+function notifier(titre,corps){
+  try{ if('Notification' in window && Notification.permission==='granted') new Notification(titre,{body:corps,tag:'td'}); }catch(e){}
+  toast(titre);
+}
+
+/* ---- démarrer / mettre en pause ---- */
+function chrono(id){
+  if(TIMER.enCours===id){ stopChrono(); render(); return; }
+  stopChrono();
+  TIMER.enCours=id; TIMER.depuis=Date.now(); saveTimer();
+  try{ if('Notification' in window && Notification.permission==='default') Notification.requestPermission(); }catch(e){}
+  bip(1); render();
+}
+function stopChrono(){
+  if(TIMER.enCours){
+    TIMER.passe[TIMER.enCours]=(TIMER.passe[TIMER.enCours]||0)+Math.floor((Date.now()-TIMER.depuis)/1000);
+    TIMER.enCours=null; TIMER.depuis=0; saveTimer();
+  }
+}
+
+/* ---- rafraîchissement chaque seconde ---- */
+function majBandeau(){
+  const t=totalJour();
+  $('dayTxt').textContent = hms(t)+' / 4h00';
+  $('dayFill').style.width = Math.min(100,100*t/CAP)+'%';
+  const c=$('daycard');
+  c.classList.toggle('warn', t>=CAP_WARN && t<CAP);
+  c.classList.toggle('over', t>=CAP);
+  const ev = TIMER.enCours ? EVENTS.filter(x=>x.id===TIMER.enCours)[0] : null;
+  $('dayTask').textContent = ev ? ('▶ '+displayTitle(ev)) : '';
+  $('dayHint').textContent = t>=CAP ? 'Tu as atteint tes 4 h. Arrête-toi ici.'
+    : (t>=CAP_WARN ? 'Plus que '+hms(CAP-t)+' avant ton plafond.' : '');
+}
+function majChips(){
+  document.querySelectorAll('[data-chrono]').forEach(function(el){
+    const id=el.getAttribute('data-chrono');
+    const ev=EVENTS.filter(x=>x.id===id)[0]; if(!ev) return;
+    const e=ecoule(id), a=alloue(ev);
+    el.textContent = mmss(e)+' / '+mmss(a);
+    el.classList.toggle('depasse', e>a);
+    el.classList.toggle('actif', TIMER.enCours===id);
+  });
+}
+function verifAlarmes(){
+  const n=new Date(), hhmm=pad(n.getHours())+':'+pad(n.getMinutes());
+  if(hhmm===H_VIDE_TETE && !TIMER.alertes.vt){
+    TIMER.alertes.vt=1; saveTimer(); bip(3);
+    notifier('⏰ Vide-tête','Note tout ce qui te vient. Tu ne traites rien.');
+    showTab('today'); brainOpen=true; saveJSON('td_brainopen',true); applyBrainOpen();
+    try{ $('bdText').focus(); }catch(e){}
+  }
+  if(hhmm===H_FIN && !TIMER.alertes.fin){
+    TIMER.alertes.fin=1; saveTimer(); stopChrono(); bip(4);
+    notifier('🌿 17h30 — fin de journée','Tu fermes. Balade, musique.'); render();
+  }
+  const t=totalJour();
+  if(t>=CAP && !TIMER.alertes.cap){
+    TIMER.alertes.cap=1; saveTimer(); bip(4);
+    notifier('🛑 4 heures atteintes','C\'est ton plafond. Stoppe ici.');
+  }
+  if(TIMER.enCours){
+    const ev=EVENTS.filter(x=>x.id===TIMER.enCours)[0];
+    if(ev && ecoule(ev.id)>alloue(ev) && !TIMER.alertes['d_'+ev.id]){
+      TIMER.alertes['d_'+ev.id]=1; saveTimer(); bip(2);
+      notifier('⏱ Temps dépassé', displayTitle(ev)+' — tu as dépassé le temps prévu.');
+    }
+  }
+}
+function tic(){
+  if(TIMER.jour!==jourCourant()){ TIMER={jour:jourCourant(),enCours:null,depuis:0,passe:{},alertes:{}}; saveTimer(); }
+  majBandeau(); majChips(); verifAlarmes();
+}
+setInterval(tic,1000);
 
 /* ================= ONGLETS ================= */
 const PANES=['today','mail','todo','perf','edito'];
