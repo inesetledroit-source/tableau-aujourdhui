@@ -256,8 +256,8 @@
 
   <div class="tabbar" id="tabbar">
     <button class="tabbtn on" data-tab="today">☀️ Aujourd'hui</button>
-    <button class="tabbtn" data-tab="mail">📧 Mails <span class="tbadge" id="c-mail"></span></button>
     <button class="tabbtn" data-tab="todo">📋 To-do <span class="tbadge" id="c-todo"></span></button>
+    <button class="tabbtn" data-tab="mail">📧 Mails <span class="tbadge" id="c-mail"></span></button>
     <button class="tabbtn" data-tab="perf">📈 Perfs</button>
     <button class="tabbtn" data-tab="edito">✍️ Édito</button>
   </div>
@@ -392,7 +392,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-07-11';
+const VERSION='2026-09-07-12';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -1433,7 +1433,7 @@ $('vtOverlay').addEventListener('click',function(e){ if(e.target===$('vtOverlay'
 $('vtGo').addEventListener('click',envoyerVT);
 
 /* ================= ONGLETS ================= */
-const PANES=['today','mail','todo','perf','edito'];
+const PANES=['today','todo','mail','perf','edito'];
 const TABTITLE={mail:'Mails',todo:'To-do website',perf:'Perfs de contenu',edito:'Édito'};
 const SUBLINE={
   today:"Toute ta journée, tous tes agendas, en une page.",
