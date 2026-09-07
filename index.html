@@ -162,7 +162,8 @@
   /* Repères de pause : ils marquent l'endroit sur la barre,
      ils ne consomment pas de temps sur les 4 h. */
   .pmark{ position:absolute; top:-4px; width:3px; height:15px; border-radius:2px; background:#7fa8c9; margin-left:-1.5px; }
-  .pmark.next{ background:none; border-left:2px dashed #cfc8b8; width:0; height:13px; top:-3px; }
+  .pmark.next{ background:none; border-left:2px dashed #d8d2c4; width:0; height:11px; top:-2px; }
+  .pmark.next.bientot{ border-left-color:#a5683a; height:14px; top:-3.5px; }
   .daycard.warn .daybar > i{ background:#d9a05b; }
   .daycard.over .daybar > i{ background:#c4675c; }
   .dayhint{ font-size:12px; color:#a5683a; margin-top:7px; }
@@ -391,7 +392,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-07-10';
+const VERSION='2026-09-07-11';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -1143,7 +1144,7 @@ function majMarques(){
   const bar=$('dayBar'); if(!bar) return;
   const prises=(TIMER.pauses||[]).filter(function(v){ return v>0 && v<=CAP; });
   const prochaine=(TIMER.ancre||0)+BLOC;
-  const sig=prises.join(',')+'|'+Math.round(prochaine);
+  const sig=prises.join(',')+'|'+Math.round(prochaine)+'|v2';
   if(sig===SIG_MARQUES) return;
   SIG_MARQUES=sig;
   bar.querySelectorAll('.pmark').forEach(function(e){ e.remove(); });
@@ -1153,10 +1154,13 @@ function majMarques(){
     s.title='Pause prise après '+hms(v) ;
     bar.appendChild(s);
   });
-  if(prochaine>0 && prochaine<CAP){
+  // toutes les pauses à venir, de 45 min en 45 min jusqu'au bout des 4 h
+  let n=1;
+  for(let v=prochaine; v<CAP && n<=12; v+=BLOC, n++){
     const s=document.createElement('span');
-    s.className='pmark next'; s.style.left=(100*prochaine/CAP)+'%';
-    s.title='Prochaine pause';
+    s.className='pmark next'+(n===1?' bientot':'');
+    s.style.left=(100*v/CAP)+'%';
+    s.title=(n===1?'Prochaine pause':'Pause suivante')+' — à '+hms(v);
     bar.appendChild(s);
   }
 }
@@ -1314,8 +1318,10 @@ function majBandeau(){
   if(ph){
     const reste=BLOC-sansPause();
     const actif=!!TIMER.enCours && !PAUSE;
-    ph.textContent = PAUSE ? '' : (sansPause()<60 ? '☕ Prochaine pause après 45 min de travail.'
-      : '☕ Pause dans '+hms(Math.max(0,reste))+(actif?'':' de travail'));
+    ph.textContent = PAUSE ? ''
+      : (reste<=0 ? '☕ Pause à prendre — tu as passé 45 min sans couper.'
+      : (sansPause()<60 ? '☕ Prochaine pause après 45 min de travail.'
+      : '☕ Pause dans '+hms(reste)+' de travail.'));
     ph.classList.toggle('soon', reste<=10*60);
   }
 }
