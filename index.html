@@ -37,8 +37,11 @@
   .section-title{ font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#b0a894; margin:22px 4px 8px; display:flex; align-items:center; gap:8px; }
   .section-title .count{ background:#efece4; color:#8a8375; border-radius:20px; padding:1px 8px; font-size:11px; }
   .sante-head{ cursor:pointer; user-select:none; }
-  .sante-caret{ margin-left:auto; color:#c3bcaa; font-size:11px; transition:transform .15s; }
+  /* petit triangle : il signale qu'une section se replie */
+  .sante-caret{ display:inline-block; color:#b0a894; font-size:9px; transition:transform .15s; width:10px; text-align:center; margin-right:-2px; }
   .sante-head.open .sante-caret{ transform:rotate(90deg); }
+  .sante-head:hover{ color:#8a8375; }
+  .sante-head:hover .sante-caret{ color:#8a8375; }
   .sante-card{ padding:8px; }
   .sante-grp{ font-size:11px; font-weight:700; color:#b0a894; margin:4px 2px 4px; }
   .sante-chips{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; }
@@ -275,7 +278,7 @@
 
       <div class="charge" id="charge"></div>
 
-      <div class="section-title sante-head" id="santeHead" role="button" tabindex="0" style="margin-top:6px">🩺 Santé du jour <span class="count" id="c-sante">0</span><span class="sante-caret" id="santeCaret">▸</span></div>
+      <div class="section-title sante-head" id="santeHead" role="button" tabindex="0" style="margin-top:6px"><span class="sante-caret" id="santeCaret">▶</span>🩺 Santé du jour <span class="count" id="c-sante">0</span></div>
       <div class="card sante-card" id="sante" style="display:none"></div>
 
       <div class="topgrid">
@@ -283,16 +286,18 @@
         <div class="tbox"><div class="tlabel">🗓️ Contexte du jour</div><div id="ctx" class="tbody"></div></div>
       </div>
 
-      <div class="section-title sante-head" id="meetHead" role="button" tabindex="0">📅 Rendez-vous & meetings <span class="count" id="c-meet">0</span><span class="sante-caret">▸</span></div>
+      <div class="section-title sante-head" id="meetHead" role="button" tabindex="0"><span class="sante-caret">▶</span>📅 Rendez-vous & meetings <span class="count" id="c-meet">0</span></div>
       <div class="card" id="meetings"></div>
 
-      <div class="section-title">✅ Tâches du jour <span class="count" id="c-task">0</span></div>
-      <div class="progress" id="progress"></div>
-      <div class="bar"><i id="barfill"></i></div>
-      <div class="card" id="tasks"></div>
-      <button class="btn btn-primary" id="closeDay">🌙 Clôturer ma journée — reporter les non-faits à demain</button>
+      <div class="section-title sante-head" id="taskHead" role="button" tabindex="0"><span class="sante-caret">▶</span>✅ Tâches du jour <span class="count" id="c-task">0</span></div>
+      <div id="taskWrap">
+        <div class="progress" id="progress"></div>
+        <div class="bar"><i id="barfill"></i></div>
+        <div class="card" id="tasks"></div>
+        <button class="btn btn-primary" id="closeDay">🌙 Clôturer ma journée — reporter les non-faits à demain</button>
+      </div>
 
-      <div class="section-title sante-head" id="brainHead" role="button" tabindex="0">🧠 Vide-tête <span class="count" id="c-brain">0</span><span class="sante-caret">▸</span></div>
+      <div class="section-title sante-head" id="brainHead" role="button" tabindex="0"><span class="sante-caret">▶</span>🧠 Vide-tête <span class="count" id="c-brain">0</span></div>
       <div class="card" id="brainCard" style="display:none">
         <div class="bd-input"><input id="bdText" placeholder="Un truc qui te passe par la tête…" autocomplete="off"></div>
         <div class="tags"><span class="bd-hint" style="margin:0 4px 0 0;">Ranger dans :</span>
@@ -392,7 +397,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-07-14';
+const VERSION='2026-09-07-16';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -506,6 +511,7 @@ function classify(ev){
   return 'task';
 }
 function startMs(ev){ if(ev.start&&ev.start.dateTime) return Date.parse(ev.start.dateTime); if(ev.start&&ev.start.date) return Date.parse((ev.start.date||'').slice(0,10)+'T00:00:00'); return 0; }
+function byStart(a,b){ return startMs(a)-startMs(b); }
 function timeLabel(ev){
   if(ev.start&&ev.start.dateTime){ const f=dt=>{const d=new Date(dt);return pad(d.getHours())+'h'+(d.getMinutes()?pad(d.getMinutes()):'');}; return f(ev.start.dateTime)+(ev.end&&ev.end.dateTime?'–'+f(ev.end.dateTime):''); }
   return 'journée';
@@ -543,11 +549,26 @@ async function toggleDone(ev){
   if(TIMER.enCours===ev.id) stopChrono();
   const cur=ev.summary||''; const nowDone=/^✅/.test(cur);
   if(!nowDone){
-    // on la coche : si le chrono n'a rien mesuré, on compte quand même la durée prévue
-    if(!TIMER.passe[ev.id]){ TIMER.passe[ev.id]=alloue(ev); TIMER.auto[ev.id]=1; saveTimer(); }
+    // On la coche. Le chrono a rarement tourné tout du long : on complète
+    // jusqu'à la durée prévue. S'il a tourné PLUS longtemps, on garde le vrai temps.
+    const dejaCompte = TIMER.passe[ev.id] || 0;
+    const prevu = alloue(ev);
+    if(dejaCompte < prevu){
+      TIMER.avant = TIMER.avant || {};
+      TIMER.avant[ev.id] = dejaCompte;   // pour pouvoir revenir en arrière
+      TIMER.passe[ev.id] = prevu;
+      TIMER.auto[ev.id] = 1;
+      saveTimer();
+    }
   } else {
-    // on la décoche : on retire le temps s'il avait été compté d'office
-    if(TIMER.auto[ev.id]){ delete TIMER.passe[ev.id]; delete TIMER.auto[ev.id]; saveTimer(); }
+    // on la décoche : on remet le temps réellement chronométré
+    if(TIMER.auto[ev.id]){
+      const av = (TIMER.avant && TIMER.avant[ev.id]) || 0;
+      if(av > 0) TIMER.passe[ev.id] = av; else delete TIMER.passe[ev.id];
+      delete TIMER.auto[ev.id];
+      if(TIMER.avant) delete TIMER.avant[ev.id];
+      saveTimer();
+    }
   }
   const newTitle= nowDone ? cur.replace(/^✅\s*/,'') : '✅ '+cur;
   ev.summary=newTitle; render();
@@ -886,6 +907,14 @@ function applyMeetOpen(){
 }
 $('meetHead').addEventListener('click',function(){ meetOpen=!meetOpen; saveJSON('td_meetopen',meetOpen); applyMeetOpen(); });
 applyMeetOpen();
+/* Tâches repliables aussi. */
+let taskOpen=loadJSON('td_taskopen',true);
+function applyTaskOpen(){
+  $('taskHead').classList.toggle('open',taskOpen);
+  $('taskWrap').style.display=taskOpen?'block':'none';
+}
+$('taskHead').addEventListener('click',function(){ taskOpen=!taskOpen; saveJSON('td_taskopen',taskOpen); applyTaskOpen(); });
+applyTaskOpen();
 $('sante').addEventListener('click',function(e){ const el=e.target.closest('[data-hid]'); if(!el)return; const id=el.getAttribute('data-hid'); const ev=EVENTS.find(function(x){return x.id===id;}); if(ev) toggleHealth(ev); });
 $('navPrev').addEventListener('click',function(){ VIEW_OFFSET--; loadToday(); });
 $('navNext').addEventListener('click',function(){ VIEW_OFFSET++; loadToday(); });
@@ -1143,6 +1172,7 @@ if(!TIMER || TIMER.jour !== jourCourant()) TIMER = {jour:jourCourant(), enCours:
 TIMER.auto = TIMER.auto || {};
 TIMER.ancre = TIMER.ancre || 0;
 TIMER.pauses = TIMER.pauses || [];
+TIMER.avant = TIMER.avant || {};
 function saveTimer(){ saveJSON('td_timer', TIMER); }
 
 /* Repères de pause sur la barre des 4 h : trait plein = pause déjà prise,
