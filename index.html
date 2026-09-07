@@ -283,7 +283,7 @@
         <div class="tbox"><div class="tlabel">🗓️ Contexte du jour</div><div id="ctx" class="tbody"></div></div>
       </div>
 
-      <div class="section-title">📅 Rendez-vous & meetings <span class="count" id="c-meet">0</span></div>
+      <div class="section-title sante-head" id="meetHead" role="button" tabindex="0">📅 Rendez-vous & meetings <span class="count" id="c-meet">0</span><span class="sante-caret">▸</span></div>
       <div class="card" id="meetings"></div>
 
       <div class="section-title">✅ Tâches du jour <span class="count" id="c-task">0</span></div>
@@ -392,7 +392,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-07-12';
+const VERSION='2026-09-07-13';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -878,6 +878,14 @@ async function autoRollover(){
 }
 $('bday').addEventListener('click',function(e){ const el=e.target.closest('[data-bd]'); if(!el)return; e.preventDefault(); const id=el.getAttribute('data-bd'); const ev=EVENTS.find(function(x){return x.id===id;}); if(ev) toggleBday(ev); });
 $('santeHead').addEventListener('click',function(){ santeOpen=!santeOpen; saveJSON('td_santeopen',santeOpen); $('santeHead').classList.toggle('open',santeOpen); $('sante').style.display=santeOpen?'block':'none'; });
+/* Rendez-vous repliable, comme Santé. L'état est retenu d'une fois sur l'autre. */
+let meetOpen=loadJSON('td_meetopen',true);
+function applyMeetOpen(){
+  $('meetHead').classList.toggle('open',meetOpen);
+  $('meetings').style.display=meetOpen?'block':'none';
+}
+$('meetHead').addEventListener('click',function(){ meetOpen=!meetOpen; saveJSON('td_meetopen',meetOpen); applyMeetOpen(); });
+applyMeetOpen();
 $('sante').addEventListener('click',function(e){ const el=e.target.closest('[data-hid]'); if(!el)return; const id=el.getAttribute('data-hid'); const ev=EVENTS.find(function(x){return x.id===id;}); if(ev) toggleHealth(ev); });
 $('navPrev').addEventListener('click',function(){ VIEW_OFFSET--; loadToday(); });
 $('navNext').addEventListener('click',function(){ VIEW_OFFSET++; loadToday(); });
