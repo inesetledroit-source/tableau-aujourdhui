@@ -421,9 +421,14 @@ function hasBooking(ev){ return BOOKING_RE.test((ev.location||'')+' '+(ev.descri
 const RDV_PHRASE=/\brendez-?vous\b|\brdv\b|\bconsultation\b|\bm[ée]decin\b|\bdocteur\b|\bdentiste\b|\bpsy(chologue|chiatre)?\b|\bkin[ée]\b|\bchiro\w*|\bophtalmo\w*|\bdermato\w*|\bgyn[ée]co\w*|\bost[ée]o\w*|\bpodologue\b|\bcardiologue\b|\bmagn[ée]tiseur\b|\bsophrologue\b|\bnaturopathe\b|\bacupuncteur\b|\bhypnoth[ée]rapeute\b|\bEMDR\b|\borthodontiste\b|\borthophoniste\b|\borthoptiste\b|\bradiologue\b|\b[ée]chographie\b|\bIRM\b|\bv[ée]t[ée]rinaire\b|\bcoiffeur\b|\bcoiffure\b|\bost[ée]opathe\b|\bp[ée]dicure\b|\bprise de sang\b|\bgare\b|\ba[ée]roport\b|\btrain\b|\btgv\b|\beurostar\b|\bouigo\b/i;
 function hasPlace(ev){ const l=String(ev.location||'').trim(); return !!l && !/^https?:\/\//i.test(l); }
 let forced=loadJSON('td_forced',{});
+/* Créneaux de livraison : ce n'est pas du travail. Ça va dans les rendez-vous
+   et ça ne compte pas dans les 4 h. Ajoute un mot dans la liste si besoin. */
+const LIVRAISON_RE=/\b(commande|livraison|livr[ée]e?s?|cr[ée]neau|colis|la fourche)\b/i;
+function estLivraison(ev){ return LIVRAISON_RE.test((ev.summary||'').replace(/^✅\s*/,'')); }
 function classify(ev){
   if(forced[ev.id]==='meeting'||forced[ev.id]==='task') return forced[ev.id];
   if(ev._sante) return 'health';
+  if(estLivraison(ev)) return 'meeting';
   if(ev.eventType==='BIRTHDAY'||ev._anniv) return 'birthday';
   if(ev._holiday) return 'context';
   const s=(ev.summary||'').replace(/^✅\s*/,'');
