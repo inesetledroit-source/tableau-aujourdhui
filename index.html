@@ -74,6 +74,12 @@
   .meet:last-child{ border-bottom:none; }
   .meet .t{ font-variant-numeric:tabular-nums; color:#3b6ea5; font-weight:700; font-size:14px; min-width:78px; }
   .meet .n{ font-weight:600; }
+  .meet .mbox{ width:22px; height:22px; border:2px solid #d9d3c6; border-radius:7px; flex:0 0 auto; cursor:pointer; background:#fff; margin-top:1px; transition:.12s; }
+  .meet .mbox:hover{ border-color:#8bbf9f; }
+  .meet .mbox.on{ background:#5fae86; border-color:#5fae86; position:relative; }
+  .meet .mbox.on::after{ content:"✓"; color:#fff; font-size:14px; font-weight:800; position:absolute; left:3px; top:-2px; }
+  .meet.done .n{ text-decoration:line-through; color:#b7b0a1; }
+  .meet.done .t{ color:#b9c6d6; }
   .task{ display:flex; gap:12px; align-items:flex-start; padding:11px 0 11px 13px; border-bottom:1px solid #f2efe8; border-left:3px solid transparent; margin-left:-16px; }
   .task.pro{ border-left-color:#8095d6; }
   .task.perso{ border-left-color:#dda06f; }
@@ -151,13 +157,33 @@
   .daytxt{ font-size:15px; font-weight:800; color:#4a4438; font-variant-numeric:tabular-nums; }
   .daycard.over .daytxt{ color:#b5443a; }
   .daytask{ font-size:12.5px; color:#7bab6a; font-weight:600; margin-left:auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:52%; }
-  .daybar{ height:7px; background:#ece8e0; border-radius:20px; overflow:hidden; margin-top:9px; }
-  .daybar > i{ display:block; height:100%; width:0; background:#5fae86; transition:width .4s; }
+  .daybar{ height:7px; background:#ece8e0; border-radius:20px; margin-top:11px; position:relative; }
+  .daybar > i{ display:block; height:100%; width:0; background:#5fae86; transition:width .4s; border-radius:20px; }
+  /* Repères de pause : ils marquent l'endroit sur la barre,
+     ils ne consomment pas de temps sur les 4 h. */
+  .pmark{ position:absolute; top:-4px; width:3px; height:15px; border-radius:2px; background:#7fa8c9; margin-left:-1.5px; }
+  .pmark.next{ background:none; border-left:2px dashed #cfc8b8; width:0; height:13px; top:-3px; }
   .daycard.warn .daybar > i{ background:#d9a05b; }
   .daycard.over .daybar > i{ background:#c4675c; }
   .dayhint{ font-size:12px; color:#a5683a; margin-top:7px; }
   .daycard.over .dayhint{ color:#b5443a; font-weight:600; }
   .dayhint:empty{ display:none; }
+  /* ---- pause toutes les 45 min ---- */
+  .pausebtn{ margin-left:auto; border:1px solid #e2ddd2; background:#fff; color:#8a8375; border-radius:20px; padding:4px 11px; font-size:11.5px; font-weight:600; font-family:inherit; cursor:pointer; flex:0 0 auto; }
+  .pausebtn:hover{ background:#f6f4ee; color:#6f6857; }
+  .pausehint{ font-size:11.5px; color:#b7b0a1; margin-top:5px; }
+  .pausehint:empty{ display:none; }
+  .pausehint.soon{ color:#a5683a; font-weight:600; }
+  .pausebox{ background:#fff; border-radius:18px; max-width:380px; width:100%; padding:30px 26px; text-align:center; }
+  .pausebox .pe{ font-size:42px; display:block; margin-bottom:10px; }
+  .pausebox h3{ margin:0 0 6px; font-size:19px; color:#2f2a22; }
+  .pausebox p{ color:#8a8375; font-size:13.5px; line-height:1.55; margin:0 0 18px; }
+  .pausebig{ font-size:52px; font-weight:700; color:#2f2a22; font-variant-numeric:tabular-nums; letter-spacing:-.02em; margin-bottom:18px; }
+  .pauseacts{ display:flex; gap:10px; flex-direction:column; }
+  .pauseacts button{ border-radius:12px; padding:12px; font-size:14px; font-weight:600; font-family:inherit; border:none; cursor:pointer; }
+  #pauseGo{ background:#2f2a22; color:#fff; }
+  #pauseGo:disabled{ background:#efece4; color:#b7b0a1; cursor:not-allowed; }
+  #pausePlus{ background:#f1eee7; color:#4a4438; }
   .chrono{ display:inline-block; margin-left:7px; font-variant-numeric:tabular-nums; font-size:11px; font-weight:700; background:#f1efe9; color:#8a8375; border-radius:10px; padding:1px 7px; }
   .chrono.actif{ background:#eef3ec; color:#4d7b40; }
   .chrono.depasse{ background:#fdeceb; color:#b5443a; }
@@ -236,9 +262,10 @@
   <!-- ============ ONGLET AUJOURD'HUI ============ -->
   <section class="pane" id="pane-today">
     <div class="daycard" id="daycard">
-      <div class="dayline"><span class="dayico">⏱</span><span class="daytxt" id="dayTxt">0 min / 4h00</span><span class="daytask" id="dayTask"></span></div>
-      <div class="daybar"><i id="dayFill"></i></div>
+      <div class="dayline"><span class="dayico">⏱</span><span class="daytxt" id="dayTxt">0 min / 4h00</span><span class="daytask" id="dayTask"></span><button class="pausebtn" id="pauseNow" title="Prendre ma pause maintenant">☕ pause</button></div>
+      <div class="daybar" id="dayBar"><i id="dayFill"></i></div>
       <div class="dayhint" id="dayHint"></div>
+      <div class="pausehint" id="pauseHint"></div>
     </div>
     <div id="status" class="spin">Chargement de ta journée…</div>
     <div id="content" style="display:none">
@@ -343,6 +370,16 @@
   <div class="bd-hint">La tâche est créée dans ton agenda principal, puis la ligne passe de « en cours » à « déjà dans agenda ».</div>
   <div class="mactions"><button class="btn btn-ghost" id="agCancel">Annuler</button><button class="btn btn-go" id="agGo">Créer</button></div>
 </div></div>
+<div class="overlay" id="pauseOverlay"><div class="pausebox">
+  <span class="pe">☕</span>
+  <h3 id="pauseTitle">Pause</h3>
+  <p id="pauseWhy">Tu te lèves. Tu ne restes pas devant l'écran.</p>
+  <div class="pausebig" id="pauseTime">05:00</div>
+  <div class="pauseacts">
+    <button id="pauseGo" disabled>Reprendre</button>
+    <button id="pausePlus">J'en prends 10 plutôt que 5</button>
+  </div>
+</div></div>
 <div class="toast" id="toast"></div>
 <div id="verstamp" style="text-align:center;font-size:10px;color:#cfc8b9;padding:14px 0 22px;letter-spacing:.04em"></div>
 
@@ -351,7 +388,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-07-05';
+const VERSION='2026-09-07-07';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -512,6 +549,8 @@ async function toggleDone(ev){
   ev.summary=newTitle; render();
   try{ await mcp(UPDATE_TOOL,{calendarId:ev._cal||PRIMARY,eventId:ev.id,summary:newTitle}); }
   catch(err){ ev.summary=cur; render(); toast('⚠️ '+err.message); }
+  // tâche terminée = bon moment pour couper, si la suivante ferait dépasser 45 min
+  if(!nowDone) pauseSiCaTombeBien();
 }
 function labelFor(url){ try{const h=new URL(url).hostname.replace('www.','');
   if(h.includes('docs.google'))return 'Doc'; if(h.includes('drive.google'))return 'Drive'; if(h.includes('sheets.google'))return 'Sheet';
@@ -619,8 +658,8 @@ function render(){
 
   $('c-meet').textContent=meetings.length;
   $('meetings').innerHTML = meetings.length? meetings.map(e=>`
-    <div class="meet"><div class="t">${esc(timeLabel(e))}</div>
-      <div class="body"><div class="n">${esc(e.summary||'(sans titre)')}</div>${linksHTML(e,true)}</div>
+    <div class="meet ${isDone(e)?'done':''}"><div class="mbox ${isDone(e)?'on':''}" data-mdone="${esc(e.id)}" title="Marquer ce rendez-vous comme fait"></div><div class="t">${esc(timeLabel(e))}</div>
+      <div class="body"><div class="n">${esc(displayTitle(e)||'(sans titre)')}</div>${linksHTML(e,true)}</div>
       <button class="swap" data-swap="task" data-id="${esc(e.id)}" title="Ce n'est pas un rendez-vous, c'est une tâche">↓ tâche</button></div>`).join('')
     : '<div class="empty">Aucun rendez-vous aujourd\'hui 🙌</div>';
 
@@ -657,9 +696,20 @@ function setForced(ev,cat){
   toast(cat==='meeting'?'Rangé dans les rendez-vous':'Rangé dans les tâches');
 }
 $('meetings').addEventListener('click',function(e){
+  const b=e.target.closest&&e.target.closest('[data-mdone]');
+  if(b){ const ev=EVENTS.find(x=>x.id===b.getAttribute('data-mdone')); if(ev) toggleMeetDone(ev); return; }
   const el=e.target.closest&&e.target.closest('[data-swap]'); if(!el) return;
   const ev=EVENTS.find(x=>x.id===el.getAttribute('data-id')); if(ev) setForced(ev,'task');
 });
+/* Cocher un rendez-vous : ✅ dans le titre de l'agenda, comme les tâches.
+   Ça ne touche pas au compteur des 4 h — un rendez-vous n'est pas du travail. */
+async function toggleMeetDone(ev){
+  const cur=ev.summary||''; const nowDone=/^✅/.test(cur);
+  const newTitle = nowDone ? cur.replace(/^✅\s*/,'') : '✅ '+cur;
+  ev.summary=newTitle; render();
+  try{ await mcp(UPDATE_TOOL,{calendarId:ev._cal||PRIMARY,eventId:ev.id,summary:newTitle}); }
+  catch(err){ ev.summary=cur; render(); toast('⚠️ '+err.message); }
+}
 function plusDT(iso,n){ const p=iso.split('T'); const d=new Date(p[0]+'T00:00:00'); d.setDate(d.getDate()+n); return ymd(d)+'T'+p[1]; }
 function plusD(dstr,n){ dstr=(dstr||'').slice(0,10); const d=new Date(dstr+'T00:00:00'); d.setDate(d.getDate()+n); return ymd(d); }
 function nextDT(iso){ return plusDT(iso,1); }
@@ -1052,11 +1102,46 @@ const H_VIDE_TETE = '17:30';     // les 4h sont finies -> vide-tête (en plus)
 const H_FIN = '17:45';           // fin du vide-tête -> récupération
 const DUREE_DEFAUT = 30*60;      // si la tâche n'a pas de durée
 
+/* ---- pauses ----
+   BLOC = on ne travaille jamais plus de 45 min d'affilée.
+   PLANCHER = en dessous, ça ne vaut pas le coup de couper. */
+const BLOC = 45*60;
+const PLANCHER_PAUSE = 20*60;
+const PAUSE_COURTE = 5*60;
+const PAUSE_LONGUE = 10*60;
+
 function jourCourant(){ return ymd(new Date()); }
 let TIMER = loadJSON('td_timer', null);
-if(!TIMER || TIMER.jour !== jourCourant()) TIMER = {jour:jourCourant(), enCours:null, depuis:0, passe:{}, alertes:{}, auto:{}};
+if(!TIMER || TIMER.jour !== jourCourant()) TIMER = {jour:jourCourant(), enCours:null, depuis:0, passe:{}, alertes:{}, auto:{}, ancre:0, pauses:[]};
 TIMER.auto = TIMER.auto || {};
+TIMER.ancre = TIMER.ancre || 0;
+TIMER.pauses = TIMER.pauses || [];
 function saveTimer(){ saveJSON('td_timer', TIMER); }
+
+/* Repères de pause sur la barre des 4 h : trait plein = pause déjà prise,
+   trait pointillé = prochaine pause. Ils marquent l'endroit, sans rien consommer. */
+let SIG_MARQUES='';
+function majMarques(){
+  const bar=$('dayBar'); if(!bar) return;
+  const prises=(TIMER.pauses||[]).filter(function(v){ return v>0 && v<=CAP; });
+  const prochaine=(TIMER.ancre||0)+BLOC;
+  const sig=prises.join(',')+'|'+Math.round(prochaine);
+  if(sig===SIG_MARQUES) return;
+  SIG_MARQUES=sig;
+  bar.querySelectorAll('.pmark').forEach(function(e){ e.remove(); });
+  prises.forEach(function(v){
+    const s=document.createElement('span');
+    s.className='pmark'; s.style.left=(100*v/CAP)+'%';
+    s.title='Pause prise après '+hms(v) ;
+    bar.appendChild(s);
+  });
+  if(prochaine>0 && prochaine<CAP){
+    const s=document.createElement('span');
+    s.className='pmark next'; s.style.left=(100*prochaine/CAP)+'%';
+    s.title='Prochaine pause';
+    bar.appendChild(s);
+  }
+}
 
 function ecoule(id){
   let s = TIMER.passe[id] || 0;
@@ -1101,9 +1186,67 @@ function notifier(titre,corps){
   toast(titre);
 }
 
+/* ================= PAUSE TOUTES LES 45 MIN =================
+   Deux déclencheurs :
+   1. le plafond dur — 45 min de travail d'affilée, on coupe où qu'on en soit ;
+   2. le déclencheur malin — quand tu finis une tâche, si en enchaîner une autre
+      te ferait dépasser les 45 min, on prend la pause maintenant plutôt que de
+      te couper au milieu de la suivante. */
+let PAUSE = null;
+function sansPause(){ return Math.max(0, totalJour() - (TIMER.ancre||0)); }
+function dureeProchaine(){
+  const suite = EVENTS.filter(function(e){ return classify(e)==='task' && !isDone(e) && e.id!==TIMER.enCours; }).sort(byStart)[0];
+  return suite ? alloue(suite) : DUREE_DEFAUT;
+}
+/* Appelé aux moments de respiration : tâche cochée, chrono arrêté. */
+function pauseSiCaTombeBien(){
+  if(PAUSE) return false;
+  const fait = sansPause();
+  if(fait < PLANCHER_PAUSE) return false;
+  if(fait + dureeProchaine() <= BLOC) return false;
+  ouvrirPause('Tu as travaillé '+hms(fait)+' d\'affilée. La tâche suivante te ferait dépasser 45 min — autant couper maintenant, entre deux tâches.');
+  return true;
+}
+function ouvrirPause(pourquoi){
+  if(PAUSE) return;
+  const tache = TIMER.enCours;
+  stopChrono();
+  PAUSE = {fin:Date.now()+PAUSE_COURTE*1000, tache:tache, sonne:0};
+  $('pauseWhy').textContent = pourquoi || 'Tu te lèves. Tu ne restes pas devant l\'écran.';
+  $('pauseOverlay').classList.add('on');
+  bip(3); notifier('☕ Pause','Lève-toi, bouge, regarde ailleurs que l\'écran.');
+  majPause(); render();
+}
+function majPause(){
+  if(!PAUSE) return;
+  const r = Math.max(0, Math.round((PAUSE.fin-Date.now())/1000));
+  const fini = r<=0;
+  $('pauseTime').textContent = mmss(r);
+  $('pauseTitle').textContent = fini ? 'Pause finie' : 'Pause';
+  $('pauseGo').disabled = !fini;
+  $('pauseGo').textContent = fini ? 'Reprendre' : 'Reprendre — dans '+mmss(r);
+  $('pausePlus').style.display = fini ? 'none' : 'block';
+  if(fini && !PAUSE.sonne){ PAUSE.sonne=1; bip(2); notifier('Pause finie','Tu peux reprendre.'); }
+}
+function finPause(){
+  if(!PAUSE || Date.now() < PAUSE.fin) return;
+  TIMER.ancre = totalJour();
+  TIMER.pauses = TIMER.pauses || [];
+  TIMER.pauses.push(TIMER.ancre);   // repère sur la barre des 4 h
+  saveTimer();
+  const t = PAUSE.tache; PAUSE = null;
+  $('pauseOverlay').classList.remove('on');
+  if(t && EVENTS.filter(function(x){return x.id===t;})[0] && !isDone(EVENTS.filter(function(x){return x.id===t;})[0])) chrono(t);
+  else render();
+}
+$('pauseGo').addEventListener('click',finPause);
+$('pausePlus').addEventListener('click',function(){ if(PAUSE){ PAUSE.fin += (PAUSE_LONGUE-PAUSE_COURTE)*1000; majPause(); } });
+$('pauseNow').addEventListener('click',function(){ ouvrirPause('Pause prise à ta demande.'); });
+
 /* ---- démarrer / mettre en pause ---- */
 function chrono(id){
-  if(TIMER.enCours===id){ stopChrono(); render(); return; }
+  if(PAUSE){ toast('Tu es en pause.'); return; }
+  if(TIMER.enCours===id){ stopChrono(); render(); if(!pauseSiCaTombeBien()) render(); return; }
   stopChrono();
   TIMER.enCours=id; TIMER.depuis=Date.now(); saveTimer();
   try{ if('Notification' in window && Notification.permission==='default') Notification.requestPermission(); }catch(e){}
@@ -1121,6 +1264,7 @@ function majBandeau(){
   const t=totalJour();
   $('dayTxt').textContent = hms(t)+' / 4h00';
   $('dayFill').style.width = Math.min(100,100*t/CAP)+'%';
+  majMarques();
   const c=$('daycard');
   c.classList.toggle('warn', t>=CAP_WARN && t<CAP);
   c.classList.toggle('over', t>=CAP);
@@ -1130,6 +1274,14 @@ function majBandeau(){
     : (t>=CAP ? 'Tes 4 h sont faites. Tu ne continues que si la journée l\'exige — 4h30 grand maximum.'
     : (t>=CAP_WARN ? 'Plus que '+hms(CAP-t)+' avant tes 4 h.' : ''));
   try{ renderCharge(EVENTS.filter(x=>classify(x)==='task')); }catch(e){}
+  const ph=$('pauseHint');
+  if(ph){
+    const reste=BLOC-sansPause();
+    const actif=!!TIMER.enCours && !PAUSE;
+    ph.textContent = PAUSE ? '' : (sansPause()<60 ? '☕ Prochaine pause après 45 min de travail.'
+      : '☕ Pause dans '+hms(Math.max(0,reste))+(actif?'':' de travail'));
+    ph.classList.toggle('soon', reste<=10*60);
+  }
 }
 function majChips(){
   document.querySelectorAll('[data-chrono]').forEach(function(el){
@@ -1176,7 +1328,9 @@ function verifAlarmes(){
   }
 }
 function tic(){
-  if(TIMER.jour!==jourCourant()){ TIMER={jour:jourCourant(),enCours:null,depuis:0,passe:{},alertes:{},auto:{}}; saveTimer(); }
+  if(TIMER.jour!==jourCourant()){ TIMER={jour:jourCourant(),enCours:null,depuis:0,passe:{},alertes:{},auto:{},ancre:0,pauses:[]}; saveTimer(); }
+  if(PAUSE) majPause();
+  else if(TIMER.enCours && sansPause()>=BLOC) ouvrirPause('45 minutes d\'affilée. On coupe ici, même au milieu.');
   majBandeau(); majChips(); verifAlarmes();
 }
 setInterval(tic,1000);
