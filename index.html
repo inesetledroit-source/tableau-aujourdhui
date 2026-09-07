@@ -178,6 +178,8 @@
   .pausehint{ font-size:11.5px; color:#b7b0a1; margin-top:5px; }
   .pausehint:empty{ display:none; }
   .pausehint.soon{ color:#a5683a; font-weight:600; }
+  .resetlink{ display:block; margin-top:6px; background:none; border:none; padding:0; font-family:inherit; font-size:11px; color:#c3bcaa; text-decoration:underline; cursor:pointer; }
+  .resetlink:hover{ color:#a5683a; }
   .pausebox{ background:#fff; border-radius:18px; max-width:380px; width:100%; padding:30px 26px; text-align:center; }
   .pausebox .pe{ font-size:42px; display:block; margin-bottom:10px; }
   .pausebox h3{ margin:0 0 6px; font-size:19px; color:#2f2a22; }
@@ -272,6 +274,7 @@
       <div class="daybar" id="dayBar"><i id="dayFill"></i></div>
       <div class="dayhint" id="dayHint"></div>
       <div class="pausehint" id="pauseHint"></div>
+      <button class="resetlink" id="resetJour">remettre le compteur à zéro</button>
     </div>
     <div id="status" class="spin">Chargement de ta journée…</div>
     <div id="content" style="display:none">
@@ -397,7 +400,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-07-16';
+const VERSION='2026-09-07-17';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -1208,11 +1211,28 @@ function ecoule(id){
   if(TIMER.enCours === id) s += Math.floor((Date.now()-TIMER.depuis)/1000);
   return s;
 }
+/* On ne compte que le temps des tâches encore présentes dans la journée.
+   Sans ça, une tâche supprimée ou reportée laissait son temps dans le total,
+   et le compteur ne redescendait jamais. */
 function totalJour(){
   let s = 0;
-  for(const k in TIMER.passe) s += TIMER.passe[k];
+  let vivants = null;
+  try{
+    if(VIEW_OFFSET===0 && typeof EVENTS!=='undefined' && EVENTS.length){
+      vivants = {};
+      EVENTS.forEach(function(e){ vivants[e.id]=1; });
+    }
+  }catch(e){ vivants = null; }
+  for(const k in TIMER.passe){ if(!vivants || vivants[k]) s += TIMER.passe[k]; }
   if(TIMER.enCours) s += Math.floor((Date.now()-TIMER.depuis)/1000);
   return s;
+}
+/* Filet de sécurité : tout remettre à plat pour la journée. */
+function remettreZero(){
+  if(!confirm('Remettre à zéro tout le temps de travail compté aujourd\'hui ?')) return;
+  stopChrono();
+  TIMER.passe={}; TIMER.auto={}; TIMER.avant={}; TIMER.alertes={}; TIMER.ancre=0; TIMER.pauses=[];
+  saveTimer(); SIG_MARQUES=''; render(); majBandeau(); toast('Compteur remis à zéro');
 }
 function alloue(ev){
   if(ev && ev.start && ev.start.dateTime && ev.end && ev.end.dateTime){
@@ -1320,6 +1340,7 @@ $('pausePlus').addEventListener('click',function(){ if(PAUSE){ PAUSE.fin += (PAU
    compteur à zéro tout de suite. Ce n'est pas sauter la pause, c'est la déclarer. */
 $('pauseDeja').addEventListener('click',function(){ finPause(true); });
 $('pauseNow').addEventListener('click',function(){ ouvrirPause('Pause prise à ta demande.'); });
+$('resetJour').addEventListener('click',remettreZero);
 
 /* ---- démarrer / mettre en pause ---- */
 function chrono(id){
