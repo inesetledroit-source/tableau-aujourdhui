@@ -392,7 +392,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-07-13';
+const VERSION='2026-09-07-14';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -631,7 +631,7 @@ function renderCharge(tasks){
   if(prevu>CAP_MAX){
     cls='over';
     txt='Ta journée pèse <b>'+hms(prevu)+'</b> — soit <b>'+hms(prevu-CAP)+' de trop</b>.';
-    sous='Reporte des tâches jusqu\'à revenir sous 4 h (bouton ↪ reporter). Sinon tu vas dépasser, c\'est mécanique.';
+    sous='';
   } else if(prevu>CAP){
     cls='warn';
     txt='Ta journée pèse <b>'+hms(prevu)+'</b>, pour un cadre de 4 h.';
@@ -641,7 +641,7 @@ function renderCharge(tasks){
     sous='Marge restante : '+hms(CAP-prevu)+'.';
   }
   box.className='charge'+(cls?' '+cls:'');
-  box.innerHTML='📐 '+txt+'<span class="cs">'+sous+'</span>';
+  box.innerHTML='📐 '+txt+(sous?'<span class="cs">'+sous+'</span>':'');
 }
 
 function render(){
