@@ -344,8 +344,25 @@
   <div class="mactions"><button class="btn btn-ghost" id="agCancel">Annuler</button><button class="btn btn-go" id="agGo">Créer</button></div>
 </div></div>
 <div class="toast" id="toast"></div>
+<div id="verstamp" style="text-align:center;font-size:10px;color:#cfc8b9;padding:14px 0 22px;letter-spacing:.04em"></div>
 
 <script>
+/* ---- mise à jour automatique ----
+   Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
+   dernière version au chargement : si le numéro a changé, on recharge tout seul.
+   (Change VERSION à chaque nouveau dépôt sur GitHub.) */
+const VERSION='2026-09-07-05';
+(async function(){
+  try{
+    const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
+    const m=t.match(/const VERSION='([^']+)'/);
+    if(!m) return;
+    if(m[1]===VERSION){ sessionStorage.removeItem('td_upd'); return; }
+    const n=+(sessionStorage.getItem('td_upd')||0);
+    if(n<2){ sessionStorage.setItem('td_upd',n+1); location.reload(); }
+  }catch(e){}
+})();
+
 const PRIMARY='inesetledroit@gmail.com';
 const CALS=[
   {id:'inesetledroit@gmail.com'},
@@ -1265,6 +1282,7 @@ $('brainHead').addEventListener('click',function(){
 });
 applyBrainOpen();
 showTab(TAB);
+try{ $('verstamp').textContent='version '+VERSION; }catch(e){}
 
 /* ---------- rafraîchissement ---------- */
 function loadExtras(){ loadMails(); loadTodo(); }
