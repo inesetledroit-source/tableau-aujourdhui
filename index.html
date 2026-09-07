@@ -180,6 +180,8 @@
   .pausehint.soon{ color:#a5683a; font-weight:600; }
   .resetlink{ display:block; margin-top:6px; background:none; border:none; padding:0; font-family:inherit; font-size:11px; color:#c3bcaa; text-decoration:underline; cursor:pointer; }
   .resetlink:hover{ color:#a5683a; }
+  .resetlink.undo{ color:#a5683a; font-weight:700; }
+  .daytxt{ cursor:pointer; }
   .pausebox{ background:#fff; border-radius:18px; max-width:380px; width:100%; padding:30px 26px; text-align:center; }
   .pausebox .pe{ font-size:42px; display:block; margin-bottom:10px; }
   .pausebox h3{ margin:0 0 6px; font-size:19px; color:#2f2a22; }
@@ -400,7 +402,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-07-17';
+const VERSION='2026-09-07-18';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -557,7 +559,7 @@ async function toggleDone(ev){
     const dejaCompte = TIMER.passe[ev.id] || 0;
     const prevu = alloue(ev);
     if(dejaCompte < prevu){
-      TIMER.avant = TIMER.avant || {};
+      TIMER.avant = TIMER.avant || {}; TIMER.bonus = TIMER.bonus || 0;
       TIMER.avant[ev.id] = dejaCompte;   // pour pouvoir revenir en arrière
       TIMER.passe[ev.id] = prevu;
       TIMER.auto[ev.id] = 1;
@@ -1171,11 +1173,11 @@ const PAUSE_LONGUE = 10*60;
 
 function jourCourant(){ return ymd(new Date()); }
 let TIMER = loadJSON('td_timer', null);
-if(!TIMER || TIMER.jour !== jourCourant()) TIMER = {jour:jourCourant(), enCours:null, depuis:0, passe:{}, alertes:{}, auto:{}, ancre:0, pauses:[]};
+if(!TIMER || TIMER.jour !== jourCourant()) TIMER = {jour:jourCourant(), enCours:null, depuis:0, passe:{}, alertes:{}, auto:{}, avant:{}, ancre:0, pauses:[], bonus:0};
 TIMER.auto = TIMER.auto || {};
 TIMER.ancre = TIMER.ancre || 0;
 TIMER.pauses = TIMER.pauses || [];
-TIMER.avant = TIMER.avant || {};
+TIMER.avant = TIMER.avant || {}; TIMER.bonus = TIMER.bonus || 0;
 function saveTimer(){ saveJSON('td_timer', TIMER); }
 
 /* Repères de pause sur la barre des 4 h : trait plein = pause déjà prise,
@@ -1225,14 +1227,40 @@ function totalJour(){
   }catch(e){ vivants = null; }
   for(const k in TIMER.passe){ if(!vivants || vivants[k]) s += TIMER.passe[k]; }
   if(TIMER.enCours) s += Math.floor((Date.now()-TIMER.depuis)/1000);
-  return s;
+  s += (TIMER.bonus||0);   // correction manuelle du total
+  return Math.max(0,s);
 }
-/* Filet de sécurité : tout remettre à plat pour la journée. */
+/* Corriger le total de la journée en une fois (clic sur le gros chiffre). */
+function corrigerTotal(){
+  const actuel = Math.round(totalJour()/60);
+  const rep = prompt('Temps de travail total pour aujourd\'hui,\nen minutes :', String(actuel));
+  if(rep===null) return;
+  const n = parseInt(String(rep).replace(',','.').trim(),10);
+  if(isNaN(n)||n<0||n>900){ toast('Donne un nombre de minutes (0 à 900)'); return; }
+  TIMER.bonus = (TIMER.bonus||0) + (n*60 - totalJour());
+  saveTimer(); render(); majBandeau(); toast('Total corrigé : '+hms(n*60));
+}
+/* Remise à zéro — avec sauvegarde, donc annulable. */
 function remettreZero(){
-  if(!confirm('Remettre à zéro tout le temps de travail compté aujourd\'hui ?')) return;
+  if(!confirm('Effacer TOUT le temps de travail compté aujourd\'hui ?\n\nLe compteur repart de 0. Tu pourras annuler juste après.')) return;
+  saveJSON('td_timer_undo', TIMER);
   stopChrono();
-  TIMER.passe={}; TIMER.auto={}; TIMER.avant={}; TIMER.alertes={}; TIMER.ancre=0; TIMER.pauses=[];
-  saveTimer(); SIG_MARQUES=''; render(); majBandeau(); toast('Compteur remis à zéro');
+  TIMER={jour:jourCourant(), enCours:null, depuis:0, passe:{}, alertes:{}, auto:{}, avant:{}, ancre:0, pauses:[], bonus:0};
+  saveTimer(); SIG_MARQUES=''; render(); majBandeau(); majResetLink(); toast('Compteur effacé — tu peux annuler');
+}
+function annulerReset(){
+  const sauve = loadJSON('td_timer_undo', null);
+  if(!sauve || sauve.jour!==jourCourant()){ toast('Rien à restaurer'); return; }
+  TIMER = sauve; TIMER.avant=TIMER.avant||{}; TIMER.bonus=TIMER.bonus||0;
+  saveTimer(); localStorage.removeItem('td_timer_undo');
+  SIG_MARQUES=''; render(); majBandeau(); majResetLink(); toast('Compteur restauré');
+}
+function majResetLink(){
+  const el=$('resetJour'); if(!el) return;
+  const sauve = loadJSON('td_timer_undo', null);
+  const dispo = !!(sauve && sauve.jour===jourCourant());
+  el.textContent = dispo ? '↩︎ annuler la remise à zéro' : 'remettre le compteur à zéro';
+  el.classList.toggle('undo', dispo);
 }
 function alloue(ev){
   if(ev && ev.start && ev.start.dateTime && ev.end && ev.end.dateTime){
@@ -1340,7 +1368,12 @@ $('pausePlus').addEventListener('click',function(){ if(PAUSE){ PAUSE.fin += (PAU
    compteur à zéro tout de suite. Ce n'est pas sauter la pause, c'est la déclarer. */
 $('pauseDeja').addEventListener('click',function(){ finPause(true); });
 $('pauseNow').addEventListener('click',function(){ ouvrirPause('Pause prise à ta demande.'); });
-$('resetJour').addEventListener('click',remettreZero);
+$('resetJour').addEventListener('click',function(){
+  const sauve = loadJSON('td_timer_undo', null);
+  if(sauve && sauve.jour===jourCourant()) annulerReset(); else remettreZero();
+});
+$('dayTxt').addEventListener('click',corrigerTotal);
+majResetLink();
 
 /* ---- démarrer / mettre en pause ---- */
 function chrono(id){
@@ -1429,7 +1462,7 @@ function verifAlarmes(){
   }
 }
 function tic(){
-  if(TIMER.jour!==jourCourant()){ TIMER={jour:jourCourant(),enCours:null,depuis:0,passe:{},alertes:{},auto:{},ancre:0,pauses:[]}; saveTimer(); }
+  if(TIMER.jour!==jourCourant()){ TIMER={jour:jourCourant(),enCours:null,depuis:0,passe:{},alertes:{},auto:{},avant:{},ancre:0,pauses:[],bonus:0}; saveTimer(); }
   if(PAUSE) majPause();
   else if(TIMER.enCours && sansPause()>=BLOC) ouvrirPause('45 minutes d\'affilée. On coupe ici, même au milieu.');
   majBandeau(); majChips(); verifAlarmes();
