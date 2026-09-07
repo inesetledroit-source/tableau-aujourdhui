@@ -74,7 +74,22 @@
   .meet:last-child{ border-bottom:none; }
   .meet .t{ font-variant-numeric:tabular-nums; color:#3b6ea5; font-weight:700; font-size:14px; min-width:78px; }
   .meet .n{ font-weight:600; }
-  .task{ display:flex; gap:12px; align-items:flex-start; padding:11px 0; border-bottom:1px solid #f2efe8; }
+  .task{ display:flex; gap:12px; align-items:flex-start; padding:11px 0 11px 13px; border-bottom:1px solid #f2efe8; border-left:3px solid transparent; margin-left:-16px; }
+  .task.pro{ border-left-color:#8095d6; }
+  .task.perso{ border-left-color:#dda06f; }
+  .tag{ display:inline-block; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; border-radius:20px; padding:2px 7px; margin-right:7px; }
+  .tag.pro{ background:#e9edfa; color:#4b5da6; }
+  .tag.perso{ background:#fbeddf; color:#a3663a; }
+  .task.done .tag{ opacity:.6; }
+  /* ---- charge prévue vs cadre de 4h ---- */
+  .charge{ border:1px solid #ece8e0; background:#fff; border-radius:12px; padding:9px 13px; margin:12px 0 2px; font-size:13px; line-height:1.45; color:#6f6857; }
+  .charge:empty{ display:none; }
+  .charge b{ font-weight:700; color:#2f2a22; }
+  .charge .cs{ display:block; font-size:12px; color:#a49c8c; margin-top:2px; }
+  .charge.warn{ background:#fff8ec; border-color:#f0dcb8; }
+  .charge.warn b, .charge.warn .cs{ color:#8a6415; }
+  .charge.over{ background:#fdeeea; border-color:#f3ccc2; }
+  .charge.over b, .charge.over .cs{ color:#a4442c; }
   .task:last-child{ border-bottom:none; }
   .box{ width:26px; height:26px; border:2px solid #d9d3c6; border-radius:8px; flex:0 0 auto; cursor:pointer; display:flex; align-items:center; justify-content:center; margin-top:1px; transition:.12s; background:#fff; }
   .box:hover{ border-color:#8bbf9f; }
@@ -227,6 +242,8 @@
     </div>
     <div id="status" class="spin">Chargement de ta journée…</div>
     <div id="content" style="display:none">
+
+      <div class="charge" id="charge"></div>
 
       <div class="section-title sante-head" id="santeHead" role="button" tabindex="0" style="margin-top:6px">🩺 Santé du jour <span class="count" id="c-sante">0</span><span class="sante-caret" id="santeCaret">▸</span></div>
       <div class="card sante-card" id="sante" style="display:none"></div>
@@ -536,6 +553,32 @@ async function loadToday(silent){
   }catch(err){ if(!silent){ $('status').className='spin'; $('status').textContent='⚠️ '+err.message; } }
 }
 
+/* Charge prévue de la journée comparée au cadre de 4 h.
+   Le cadre n'existe nulle part dans l'agenda : c'est cette ligne qui le fait respecter. */
+function renderCharge(tasks){
+  const box=$('charge'); if(!box) return;
+  if(VIEW_OFFSET!==0||!tasks.length){ box.innerHTML=''; box.className='charge'; return; }
+  const fait=totalJour();
+  let reste=0;
+  tasks.forEach(function(e){ if(!isDone(e)&&!TIMER.passe[e.id]) reste+=alloue(e); });
+  const prevu=fait+reste;
+  let cls='', txt, sous;
+  if(prevu>CAP_MAX){
+    cls='over';
+    txt='Ta journée pèse <b>'+hms(prevu)+'</b> — soit <b>'+hms(prevu-CAP)+' de trop</b>.';
+    sous='Reporte des tâches jusqu\'à revenir sous 4 h (bouton ↪ reporter). Sinon tu vas dépasser, c\'est mécanique.';
+  } else if(prevu>CAP){
+    cls='warn';
+    txt='Ta journée pèse <b>'+hms(prevu)+'</b>, pour un cadre de 4 h.';
+    sous='Tu es dans la marge des 4h30, mais il n\'y a plus rien à ajouter.';
+  } else {
+    txt='Ta journée pèse <b>'+hms(prevu)+'</b> sur tes 4 h.';
+    sous='Marge restante : '+hms(CAP-prevu)+'.';
+  }
+  box.className='charge'+(cls?' '+cls:'');
+  box.innerHTML='📐 '+txt+'<span class="cs">'+sous+'</span>';
+}
+
 function render(){
   const byStart=(a,b)=>startMs(a)-startMs(b);
   const meetings=EVENTS.filter(e=>classify(e)==='meeting').sort(byStart);
@@ -544,6 +587,7 @@ function render(){
   const context=EVENTS.filter(e=>classify(e)==='context');
   const bdays=EVENTS.filter(e=>classify(e)==='birthday');
   const health=EVENTS.filter(e=>classify(e)==='health').sort(byStart);
+  renderCharge(tasks);
 
   // top boxes : anniversaires + contexte (toujours visibles)
   const seen=new Set(); const blist=[];
@@ -565,9 +609,9 @@ function render(){
   let _sepPose=false;
   $('tasks').innerHTML = tasks.length? tasks.map(e=>`
     ${(isDone(e)&&!_sepPose&&(_sepPose=true))?`<div class="donesep">✓ Faites (${dc})</div>`:''}
-    <div class="task ${isDone(e)?'done':''}">
+    <div class="task ${isDone(e)?'done':''} ${estPerso(e)?'perso':'pro'}">
       <div class="box ${isDone(e)?'on':''}" data-act="toggle" data-id="${esc(e.id)}"></div>
-      <div class="body"><div class="tt">${esc(displayTitle(e)||'(sans titre)')}</div><div class="meta">${esc(timeLabel(e))}<span class="chrono" data-chrono="${esc(e.id)}"></span></div>${linksHTML(e,false)}</div>
+      <div class="body"><div class="tt">${esc(displayTitle(e)||'(sans titre)')}</div><div class="meta"><span class="tag ${estPerso(e)?'perso':'pro'}">${estPerso(e)?'Perso':'Pro'}</span>${esc(timeLabel(e))}<span class="chrono" data-chrono="${esc(e.id)}"></span></div>${linksHTML(e,false)}</div>
       <div class="acts"><button class="later go ${TIMER.enCours===e.id?'on':''}" data-act="chrono" data-id="${esc(e.id)}">${TIMER.enCours===e.id?'⏸ pause':'▶ go'}</button><button class="later ai" data-act="copy" data-id="${esc(e.id)}">📋 Copier</button>${e.start&&e.start.dateTime?`<button class="later" data-act="shift" data-id="${esc(e.id)}">⏱ décaler</button>`:''}<button class="later" data-act="later" data-id="${esc(e.id)}">↪ reporter</button><button class="later" data-act="tomeet" data-id="${esc(e.id)}">↑ RDV</button></div></div>`).join('')
     : '<div class="empty">Rien de bloqué aujourd\'hui. Profite, ou pioche une tâche dans ta Sheet 🙂</div>';
   $('closeDay').style.display=(tasks.length&&VIEW_OFFSET===0)?'block':'none';
@@ -1063,6 +1107,7 @@ function majBandeau(){
   $('dayHint').textContent = t>=CAP_MAX ? '4h30. C\'est ta limite absolue. Tu fermes.'
     : (t>=CAP ? 'Tes 4 h sont faites. Tu ne continues que si la journée l\'exige — 4h30 grand maximum.'
     : (t>=CAP_WARN ? 'Plus que '+hms(CAP-t)+' avant tes 4 h.' : ''));
+  try{ renderCharge(EVENTS.filter(x=>classify(x)==='task')); }catch(e){}
 }
 function majChips(){
   document.querySelectorAll('[data-chrono]').forEach(function(el){
