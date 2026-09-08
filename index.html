@@ -409,7 +409,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-08-22';
+const VERSION='2026-09-08-23';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -846,26 +846,39 @@ async function doRollover(list){
   }catch(err){ toast('⚠️ '+err.message); }
   $('closeDay').disabled=false;
 }
-/* En clôturant la journée, le temps admin est écrit dans l'agenda.
-   Sans ça il disparaîtrait à minuit avec le compteur du jour. */
-async function archiverAdmin(){
-  if(TIMER.adminFait) return;
-  if(TIMER.enCours===ADMIN) stopChrono();
-  const t = TIMER.passe[ADMIN] || 0;
+/* Le temps admin est écrit dans l'agenda à CHAQUE arrêt du chrono, pas
+   seulement à la clôture : sans ça il disparaîtrait à minuit avec le compteur.
+   Le même événement est mis à jour au fil de la journée, jamais dupliqué. */
+let syncAdminEnCours=false;
+async function syncAdmin(){
+  if(syncAdminEnCours) return;
+  const t = ecoule(ADMIN);                  // marche aussi chrono en marche
   if(t < 60) return;                       // moins d'une minute : rien à garder
-  const fin = new Date();
-  const deb = new Date(fin.getTime() - t*1000);
+  if(TIMER.adminEcrit === t) return;        // déjà enregistré à cette valeur
+  const deb = new Date(TIMER.adminDebut || (Date.now()-t*1000));
+  const fin = new Date(deb.getTime() + t*1000);
+  const corps = {
+    summary:'✅ ⚙️ Admin — '+hms(t),
+    description:'Temps admin cumulé de la journée : mails, tableau, rangement.',
+    start:{dateTime:offISO(deb),timeZone:'Europe/Paris'},
+    end:{dateTime:offISO(fin),timeZone:'Europe/Paris'},
+    transparency:'transparent'
+  };
+  syncAdminEnCours=true;
   try{
-    await gfetch('POST','/calendars/'+encodeURIComponent(PRIMARY)+'/events',{
-      summary:'✅ ⚙️ Admin — '+hms(t),
-      description:'Temps admin cumulé de la journée : mails, tableau, rangement.',
-      start:{dateTime:offISO(deb),timeZone:'Europe/Paris'},
-      end:{dateTime:offISO(fin),timeZone:'Europe/Paris'},
-      transparency:'transparent'
-    });
-    TIMER.adminFait=1; saveTimer();
-    toast('⚙️ '+hms(t)+' d\'admin enregistrées dans l\'agenda');
+    if(TIMER.adminEventId){
+      await gfetch('PATCH','/calendars/'+encodeURIComponent(PRIMARY)+'/events/'+encodeURIComponent(TIMER.adminEventId), corps);
+    } else {
+      const r = await gfetch('POST','/calendars/'+encodeURIComponent(PRIMARY)+'/events', corps);
+      if(r && r.id) TIMER.adminEventId = r.id;
+    }
+    TIMER.adminEcrit = t; saveTimer();
   }catch(err){ toast('⚠️ Admin non enregistré : '+err.message); }
+  finally{ syncAdminEnCours=false; }
+}
+async function archiverAdmin(){
+  if(TIMER.enCours===ADMIN) stopChrono();
+  await syncAdmin();
 }
 $('closeDay').addEventListener('click',async ()=>{
   await archiverAdmin();
@@ -1419,14 +1432,19 @@ function chrono(id){
   if(PAUSE){ toast('Tu es en pause.'); return; }
   if(TIMER.enCours===id){ stopChrono(); render(); if(!pauseSiCaTombeBien()) render(); return; }
   stopChrono();
-  TIMER.enCours=id; TIMER.depuis=Date.now(); saveTimer();
+  TIMER.enCours=id; TIMER.depuis=Date.now();
+  if(id===ADMIN && !TIMER.adminDebut) TIMER.adminDebut=Date.now();  // 1er admin du jour
+  saveTimer();
   try{ if('Notification' in window && Notification.permission==='default') Notification.requestPermission(); }catch(e){}
   bip(1); render();
 }
 function stopChrono(){
   if(TIMER.enCours){
-    TIMER.passe[TIMER.enCours]=(TIMER.passe[TIMER.enCours]||0)+Math.floor((Date.now()-TIMER.depuis)/1000);
+    const quoi=TIMER.enCours;
+    TIMER.passe[quoi]=(TIMER.passe[quoi]||0)+Math.floor((Date.now()-TIMER.depuis)/1000);
     TIMER.enCours=null; TIMER.depuis=0; saveTimer();
+    // l'admin n'a pas de tâche d'agenda : on l'écrit tout de suite, à chaque arrêt
+    if(quoi===ADMIN){ try{ syncAdmin(); }catch(e){} }
   }
 }
 
@@ -1518,6 +1536,8 @@ function tic(){
   if(TIMER.jour!==jourCourant()){ TIMER={jour:jourCourant(),enCours:null,depuis:0,passe:{},alertes:{},auto:{},avant:{},ancre:0,pauses:[],bonus:0}; saveTimer(); }
   if(PAUSE) majPause();
   else if(TIMER.enCours && sansPause()>=BLOC) ouvrirPause('45 minutes d\'affilée. On coupe ici, même au milieu.');
+  // filet : si le chrono admin tourne longtemps sans être arrêté, on enregistre quand même
+  if(TIMER.enCours===ADMIN && ecoule(ADMIN)%120===0){ try{ syncAdmin(); }catch(e){} }
   majBandeau(); majChips(); verifAlarmes();
 }
 setInterval(tic,1000);
