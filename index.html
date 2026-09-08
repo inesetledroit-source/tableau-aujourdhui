@@ -280,7 +280,6 @@
       <div class="dayhint" id="dayHint"></div>
       <div class="persohint" id="persoHint"></div>
       <div class="pausehint" id="pauseHint"></div>
-      <button class="resetlink" id="resetJour">remettre le compteur à zéro</button>
     </div>
     <div id="status" class="spin">Chargement de ta journée…</div>
     <div id="content" style="display:none">
@@ -406,7 +405,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-07-19';
+const VERSION='2026-09-08-20';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -558,14 +557,15 @@ async function toggleDone(ev){
   if(TIMER.enCours===ev.id) stopChrono();
   const cur=ev.summary||''; const nowDone=/^✅/.test(cur);
   if(!nowDone){
-    // On la coche. Le chrono a rarement tourné tout du long : on complète
-    // jusqu'à la durée prévue. S'il a tourné PLUS longtemps, on garde le vrai temps.
+    // On la coche. Si le chrono a mesuré quelque chose, on garde SA mesure :
+    // c'est la seule donnée réelle. On ne compte la durée prévue que si le
+    // chrono n'a rien mesuré du tout (minuteur oublié).
+    // Pour ajuster un temps mal mesuré : clic sur la pastille du chrono.
     const dejaCompte = TIMER.passe[ev.id] || 0;
-    const prevu = alloue(ev);
-    if(dejaCompte < prevu){
+    if(dejaCompte === 0){
       TIMER.avant = TIMER.avant || {}; TIMER.bonus = TIMER.bonus || 0;
-      TIMER.avant[ev.id] = dejaCompte;   // pour pouvoir revenir en arrière
-      TIMER.passe[ev.id] = prevu;
+      TIMER.avant[ev.id] = 0;
+      TIMER.passe[ev.id] = alloue(ev);
       TIMER.auto[ev.id] = 1;
       saveTimer();
     }
@@ -1273,13 +1273,7 @@ function annulerReset(){
   saveTimer(); localStorage.removeItem('td_timer_undo');
   SIG_MARQUES=''; render(); majBandeau(); majResetLink(); toast('Compteur restauré');
 }
-function majResetLink(){
-  const el=$('resetJour'); if(!el) return;
-  const sauve = loadJSON('td_timer_undo', null);
-  const dispo = !!(sauve && sauve.jour===jourCourant());
-  el.textContent = dispo ? '↩︎ annuler la remise à zéro' : 'remettre le compteur à zéro';
-  el.classList.toggle('undo', dispo);
-}
+function majResetLink(){ /* le bouton de remise à zéro a été retiré */ }
 function alloue(ev){
   if(ev && ev.start && ev.start.dateTime && ev.end && ev.end.dateTime){
     const d = (Date.parse(ev.end.dateTime)-Date.parse(ev.start.dateTime))/1000;
@@ -1386,12 +1380,7 @@ $('pausePlus').addEventListener('click',function(){ if(PAUSE){ PAUSE.fin += (PAU
    compteur à zéro tout de suite. Ce n'est pas sauter la pause, c'est la déclarer. */
 $('pauseDeja').addEventListener('click',function(){ finPause(true); });
 $('pauseNow').addEventListener('click',function(){ ouvrirPause('Pause prise à ta demande.'); });
-$('resetJour').addEventListener('click',function(){
-  const sauve = loadJSON('td_timer_undo', null);
-  if(sauve && sauve.jour===jourCourant()) annulerReset(); else remettreZero();
-});
 $('dayTxt').addEventListener('click',corrigerTotal);
-majResetLink();
 
 /* ---- démarrer / mettre en pause ---- */
 function chrono(id){
