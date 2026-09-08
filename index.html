@@ -175,6 +175,10 @@
   /* ---- pause toutes les 45 min ---- */
   .pausebtn{ margin-left:auto; border:1px solid #e2ddd2; background:#fff; color:#8a8375; border-radius:20px; padding:4px 11px; font-size:11.5px; font-weight:600; font-family:inherit; cursor:pointer; flex:0 0 auto; }
   .pausebtn:hover{ background:#f6f4ee; color:#6f6857; }
+  #pauseNow{ margin-left:6px; }
+  #adminBtn{ margin-left:auto; font-variant-numeric:tabular-nums; }
+  #adminBtn.on{ background:#2f2a22; border-color:#2f2a22; color:#fff; }
+  #adminBtn.a-fait{ border-color:#cfe0c6; background:#f2f7f0; color:#5f8a55; }
   .persohint{ font-size:12px; font-weight:700; color:#a3663a; margin-top:7px; }
   .persohint:empty{ display:none; }
   .persohint span{ font-weight:600; color:#c0a58e; }
@@ -275,7 +279,7 @@
   <!-- ============ ONGLET AUJOURD'HUI ============ -->
   <section class="pane" id="pane-today">
     <div class="daycard" id="daycard">
-      <div class="dayline"><span class="dayico">⏱</span><span class="daytxt" id="dayTxt">0 min / 4h00</span><span class="daytask" id="dayTask"></span><button class="pausebtn" id="pauseNow" title="Prendre ma pause maintenant">☕ pause</button></div>
+      <div class="dayline"><span class="dayico">⏱</span><span class="daytxt" id="dayTxt">0 min / 4h00</span><span class="daytask" id="dayTask"></span><button class="pausebtn" id="adminBtn" title="Chrono pour le temps admin sans tâche : mails, tableau, rangement">⚙️ admin</button><button class="pausebtn" id="pauseNow" title="Prendre ma pause maintenant">☕ pause</button></div>
       <div class="daybar" id="dayBar"><i id="dayFill"></i></div>
       <div class="dayhint" id="dayHint"></div>
       <div class="persohint" id="persoHint"></div>
@@ -405,7 +409,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-08-20';
+const VERSION='2026-09-08-21';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -1222,7 +1226,11 @@ function ecoule(id){
    - PERSO : compté à part, affiché en dessous, il ne mange pas les 4 h.
    On ne compte que les tâches encore présentes dans la journée : sans ça, une
    tâche supprimée ou reportée laissait son temps dans le total. */
+/* Temps admin : mails, tableau, rangement — du travail sans tâche attitrée.
+   Ce n'est pas un événement d'agenda, mais son temps compte dans les 4 h. */
+const ADMIN='__admin';
 function estPersoId(id){
+  if(id===ADMIN) return false;
   try{ const e=EVENTS.filter(function(x){return x.id===id;})[0]; return e ? estPerso(e) : false; }
   catch(err){ return false; }
 }
@@ -1236,7 +1244,7 @@ function totauxJour(){
     }
   }catch(e){ vivants = null; }
   for(const k in TIMER.passe){
-    if(vivants && !vivants[k]) continue;
+    if(vivants && !vivants[k] && k!==ADMIN) continue;
     if(estPersoId(k)) perso += TIMER.passe[k]; else pro += TIMER.passe[k];
   }
   if(TIMER.enCours){
@@ -1371,7 +1379,8 @@ function finPause(force){
   saveTimer();
   const t = PAUSE.tache; PAUSE = null;
   $('pauseOverlay').classList.remove('on');
-  if(t && EVENTS.filter(function(x){return x.id===t;})[0] && !isDone(EVENTS.filter(function(x){return x.id===t;})[0])) chrono(t);
+  if(t===ADMIN) chrono(ADMIN);
+  else if(t && EVENTS.filter(function(x){return x.id===t;})[0] && !isDone(EVENTS.filter(function(x){return x.id===t;})[0])) chrono(t);
   else render();
 }
 $('pauseGo').addEventListener('click',function(){ finPause(false); });
@@ -1381,6 +1390,7 @@ $('pausePlus').addEventListener('click',function(){ if(PAUSE){ PAUSE.fin += (PAU
 $('pauseDeja').addEventListener('click',function(){ finPause(true); });
 $('pauseNow').addEventListener('click',function(){ ouvrirPause('Pause prise à ta demande.'); });
 $('dayTxt').addEventListener('click',corrigerTotal);
+$('adminBtn').addEventListener('click',function(){ chrono(ADMIN); });
 
 /* ---- démarrer / mettre en pause ---- */
 function chrono(id){
@@ -1408,7 +1418,16 @@ function majBandeau(){
   c.classList.toggle('warn', t>=CAP_WARN && t<CAP);
   c.classList.toggle('over', t>=CAP);
   const ev = TIMER.enCours ? EVENTS.filter(x=>x.id===TIMER.enCours)[0] : null;
-  $('dayTask').textContent = ev ? ('▶ '+displayTitle(ev)) : '';
+  $('dayTask').textContent = (TIMER.enCours===ADMIN) ? '▶ Admin' : (ev ? ('▶ '+displayTitle(ev)) : '');
+  const ab=$('adminBtn');
+  if(ab){
+    const e=ecoule(ADMIN), actif=(TIMER.enCours===ADMIN);
+    ab.textContent = e>0 ? ('⚙️ admin '+mmss(e)) : '⚙️ admin';
+    ab.classList.toggle('on', actif);
+    ab.classList.toggle('a-fait', !actif && e>0);
+    ab.title = actif ? 'Chrono admin en cours — clique pour arrêter'
+                     : 'Chrono pour le temps admin sans tâche : mails, tableau, rangement';
+  }
   $('dayHint').textContent = t>=CAP_MAX ? '4h30. C\'est ta limite absolue. Tu fermes.'
     : (t>=CAP ? 'Tes 4 h sont faites. Tu ne continues que si la journée l\'exige — 4h30 grand maximum.'
     : (t>=CAP_WARN ? 'Plus que '+hms(CAP-t)+' avant tes 4 h.' : ''));
