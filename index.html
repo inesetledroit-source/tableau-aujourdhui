@@ -409,7 +409,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-08-21';
+const VERSION='2026-09-08-22';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -846,7 +846,29 @@ async function doRollover(list){
   }catch(err){ toast('⚠️ '+err.message); }
   $('closeDay').disabled=false;
 }
-$('closeDay').addEventListener('click',()=>{
+/* En clôturant la journée, le temps admin est écrit dans l'agenda.
+   Sans ça il disparaîtrait à minuit avec le compteur du jour. */
+async function archiverAdmin(){
+  if(TIMER.adminFait) return;
+  if(TIMER.enCours===ADMIN) stopChrono();
+  const t = TIMER.passe[ADMIN] || 0;
+  if(t < 60) return;                       // moins d'une minute : rien à garder
+  const fin = new Date();
+  const deb = new Date(fin.getTime() - t*1000);
+  try{
+    await gfetch('POST','/calendars/'+encodeURIComponent(PRIMARY)+'/events',{
+      summary:'✅ ⚙️ Admin — '+hms(t),
+      description:'Temps admin cumulé de la journée : mails, tableau, rangement.',
+      start:{dateTime:offISO(deb),timeZone:'Europe/Paris'},
+      end:{dateTime:offISO(fin),timeZone:'Europe/Paris'},
+      transparency:'transparent'
+    });
+    TIMER.adminFait=1; saveTimer();
+    toast('⚙️ '+hms(t)+' d\'admin enregistrées dans l\'agenda');
+  }catch(err){ toast('⚠️ Admin non enregistré : '+err.message); }
+}
+$('closeDay').addEventListener('click',async ()=>{
+  await archiverAdmin();
   const undone=EVENTS.filter(e=>classify(e)==='task'&&!isDone(e));
   if(!undone.length){ toast('Tout est coché, bravo 🎉'); return; }
   $('mlist').innerHTML=undone.map(e=>`<label class="mrow"><input type="checkbox" checked data-id="${esc(e.id)}"><span class="mt">${esc(e.summary||'(sans titre)')}</span><span class="mtime">→ ${esc(libelleReport(e))}</span></label>`).join('');
