@@ -175,6 +175,9 @@
   /* ---- pause toutes les 45 min ---- */
   .pausebtn{ margin-left:auto; border:1px solid #e2ddd2; background:#fff; color:#8a8375; border-radius:20px; padding:4px 11px; font-size:11.5px; font-weight:600; font-family:inherit; cursor:pointer; flex:0 0 auto; }
   .pausebtn:hover{ background:#f6f4ee; color:#6f6857; }
+  .persohint{ font-size:12px; font-weight:700; color:#a3663a; margin-top:7px; }
+  .persohint:empty{ display:none; }
+  .persohint span{ font-weight:600; color:#c0a58e; }
   .pausehint{ font-size:11.5px; color:#b7b0a1; margin-top:5px; }
   .pausehint:empty{ display:none; }
   .pausehint.soon{ color:#a5683a; font-weight:600; }
@@ -275,6 +278,7 @@
       <div class="dayline"><span class="dayico">⏱</span><span class="daytxt" id="dayTxt">0 min / 4h00</span><span class="daytask" id="dayTask"></span><button class="pausebtn" id="pauseNow" title="Prendre ma pause maintenant">☕ pause</button></div>
       <div class="daybar" id="dayBar"><i id="dayFill"></i></div>
       <div class="dayhint" id="dayHint"></div>
+      <div class="persohint" id="persoHint"></div>
       <div class="pausehint" id="pauseHint"></div>
       <button class="resetlink" id="resetJour">remettre le compteur à zéro</button>
     </div>
@@ -402,7 +406,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-07-18';
+const VERSION='2026-09-07-19';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -678,7 +682,7 @@ function render(){
   const context=EVENTS.filter(e=>classify(e)==='context');
   const bdays=EVENTS.filter(e=>classify(e)==='birthday');
   const health=EVENTS.filter(e=>classify(e)==='health').sort(byStart);
-  renderCharge(tasks);
+  renderCharge(tasks.filter(function(e){ return !estPerso(e); }));
 
   // top boxes : anniversaires + contexte (toujours visibles)
   const seen=new Set(); const blist=[];
@@ -1213,11 +1217,17 @@ function ecoule(id){
   if(TIMER.enCours === id) s += Math.floor((Date.now()-TIMER.depuis)/1000);
   return s;
 }
-/* On ne compte que le temps des tâches encore présentes dans la journée.
-   Sans ça, une tâche supprimée ou reportée laissait son temps dans le total,
-   et le compteur ne redescendait jamais. */
-function totalJour(){
-  let s = 0;
+/* Deux compteurs séparés :
+   - PRO : c'est lui qui remplit les 4 h ;
+   - PERSO : compté à part, affiché en dessous, il ne mange pas les 4 h.
+   On ne compte que les tâches encore présentes dans la journée : sans ça, une
+   tâche supprimée ou reportée laissait son temps dans le total. */
+function estPersoId(id){
+  try{ const e=EVENTS.filter(function(x){return x.id===id;})[0]; return e ? estPerso(e) : false; }
+  catch(err){ return false; }
+}
+function totauxJour(){
+  let pro = 0, perso = 0;
   let vivants = null;
   try{
     if(VIEW_OFFSET===0 && typeof EVENTS!=='undefined' && EVENTS.length){
@@ -1225,11 +1235,19 @@ function totalJour(){
       EVENTS.forEach(function(e){ vivants[e.id]=1; });
     }
   }catch(e){ vivants = null; }
-  for(const k in TIMER.passe){ if(!vivants || vivants[k]) s += TIMER.passe[k]; }
-  if(TIMER.enCours) s += Math.floor((Date.now()-TIMER.depuis)/1000);
-  s += (TIMER.bonus||0);   // correction manuelle du total
-  return Math.max(0,s);
+  for(const k in TIMER.passe){
+    if(vivants && !vivants[k]) continue;
+    if(estPersoId(k)) perso += TIMER.passe[k]; else pro += TIMER.passe[k];
+  }
+  if(TIMER.enCours){
+    const d = Math.floor((Date.now()-TIMER.depuis)/1000);
+    if(estPersoId(TIMER.enCours)) perso += d; else pro += d;
+  }
+  pro += (TIMER.bonus||0);   // correction manuelle du total pro
+  return {pro:Math.max(0,pro), perso:Math.max(0,perso)};
 }
+function totalJour(){ return totauxJour().pro; }
+function totalPerso(){ return totauxJour().perso; }
 /* Corriger le total de la journée en une fois (clic sur le gros chiffre). */
 function corrigerTotal(){
   const actuel = Math.round(totalJour()/60);
@@ -1405,7 +1423,12 @@ function majBandeau(){
   $('dayHint').textContent = t>=CAP_MAX ? '4h30. C\'est ta limite absolue. Tu fermes.'
     : (t>=CAP ? 'Tes 4 h sont faites. Tu ne continues que si la journée l\'exige — 4h30 grand maximum.'
     : (t>=CAP_WARN ? 'Plus que '+hms(CAP-t)+' avant tes 4 h.' : ''));
-  try{ renderCharge(EVENTS.filter(x=>classify(x)==='task')); }catch(e){}
+  const ph2=$('persoHint');
+  if(ph2){
+    const pp=totalPerso();
+    ph2.innerHTML = pp>0 ? '+ '+hms(pp)+' <span>en perso, hors des 4 h</span>' : '';
+  }
+  try{ renderCharge(EVENTS.filter(x=>classify(x)==='task' && !estPerso(x))); }catch(e){}
   const ph=$('pauseHint');
   if(ph){
     const reste=BLOC-sansPause();
