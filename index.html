@@ -421,7 +421,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-09-28';
+const VERSION='2026-09-09-29';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -1405,13 +1405,20 @@ function majNotifLigne(){
   try{ if('Notification' in window) etat=Notification.permission; }catch(e){ etat='non'; }
   if(etat==='granted'){ el.innerHTML=''; return; }
   if(etat==='denied'){
-    el.innerHTML='🔕 Notifications bloquées — sans elles, seul le son peut te prévenir. À réautoriser dans les réglages du navigateur.';
+    el.innerHTML='🔕 Notifications bloquées — sans elles, seul le son peut te prévenir. À réautoriser dans Réglages système → Notifications → Aujourd\'hui.';
     return;
   }
   el.innerHTML='🔕 Notifications désactivées. <button id="notifGo">Les activer</button>';
   const b=$('notifGo');
+  // Safari n'accepte cette demande QUE depuis un vrai clic, et sa vieille
+  // version passe par une fonction de rappel au lieu d'une promesse.
   if(b) b.addEventListener('click',function(){
-    try{ Notification.requestPermission().then(majNotifLigne); }catch(e){}
+    try{
+      const r = Notification.requestPermission(function(){ majNotifLigne(); });
+      if(r && typeof r.then==='function') r.then(majNotifLigne);
+    }catch(e){}
+    setTimeout(majNotifLigne, 1500);
+    setTimeout(majNotifLigne, 5000);
   });
 }
 
