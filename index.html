@@ -204,6 +204,8 @@
   #pauseGo:disabled{ background:#efece4; color:#b7b0a1; cursor:not-allowed; }
   #pausePlus{ background:#f1eee7; color:#4a4438; }
   #pauseDeja{ background:none; color:#a49c8c; font-size:12.5px; text-decoration:underline; padding:4px; }
+  .pausedepuis{ font-size:12.5px; font-weight:600; color:#a4442c; margin:-10px 0 16px; }
+  .pausedepuis:empty{ display:none; }
   .chrono{ display:inline-block; margin-left:7px; font-variant-numeric:tabular-nums; font-size:11px; font-weight:700; background:#f1efe9; color:#8a8375; border-radius:10px; padding:1px 7px; cursor:pointer; }
   .chrono:hover{ background:#e6e2d8; color:#6f6857; }
   .chrono.actif{ background:#eef3ec; color:#4d7b40; }
@@ -400,6 +402,7 @@
   <h3 id="pauseTitle">Pause</h3>
   <p id="pauseWhy">Tu te lèves. Tu ne restes pas devant l'écran.</p>
   <div class="pausebig" id="pauseTime">05:00</div>
+  <div class="pausedepuis" id="pauseDepuis"></div>
   <div class="pauseacts">
     <button id="pauseGo" disabled>Reprendre</button>
     <button id="pausePlus">J'en prends 10 plutôt que 5</button>
@@ -414,7 +417,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-09-25';
+const VERSION='2026-09-09-26';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -1407,19 +1410,38 @@ function majPause(){
   $('pauseGo').disabled = !fini;
   $('pauseGo').textContent = fini ? 'Reprendre' : 'Reprendre — dans '+mmss(r);
   $('pausePlus').style.display = fini ? 'none' : 'block';
-  $('pauseDeja').style.display = fini ? 'none' : 'block';
-  if(fini && !PAUSE.sonne){ PAUSE.sonne=1; bip(2); notifier('Pause finie','Tu peux reprendre.'); }
+  $('pauseDeja').style.display = 'block';   // dispo aussi après la fin
+  const ouvertDepuis = Math.floor((Date.now()-PAUSE.debut)/1000);
+  $('pauseDeja').textContent = fini ? 'En fait je travaillais pendant ce temps-là'
+                                    : 'Je viens déjà d\'en prendre une — j\'étais en train de travailler';
+  // Depuis combien de temps cet écran attend : si tu ne l'as pas vu, tu le sais.
+  $('pauseDepuis').textContent = (ouvertDepuis > PAUSE_COURTE+60)
+    ? 'Cet écran est ouvert depuis '+hms(ouvertDepuis)+'.' : '';
+  if(fini && !PAUSE.sonne){ PAUSE.sonne=1; bip(2); notifier('☕ Pause finie','Tu peux reprendre.'); }
+  // Tant que tu n'as pas cliqué, on continue de te rappeler — toutes les 30 s.
+  if(!PAUSE.dernierRappel) PAUSE.dernierRappel = Date.now();
+  if(Date.now()-PAUSE.dernierRappel > 30000){
+    PAUSE.dernierRappel = Date.now();
+    bip(2);
+    notifier(fini?'☕ Pause finie':'☕ Pause en cours', fini?'Reviens sur le tableau pour reprendre.':'Lève-toi, ne reste pas devant l\'écran.');
+  }
+  document.title = (fini?'⏸ PAUSE FINIE — ':'⏸ PAUSE — ')+'Aujourd\'hui';
 }
-/* CREDIT_MAX : si l'écran de pause est resté ouvert plus longtemps que ça,
-   c'est que tu étais partie — on ne te compte pas ces minutes comme du travail. */
-const CREDIT_MAX = 15*60;
 function finPause(force){
   if(!PAUSE) return;
   if(!force && Date.now() < PAUSE.fin) return;
-  // Cas « j'avais déjà pris ma pause » : tu as continué à travailler pendant que
-  // l'écran était affiché. Ce temps est du travail, pas de la pause : on le rend.
+  // Cas « j'ai travaillé pendant que l'écran était affiché ». On ne devine pas
+  // combien : au-delà de quelques minutes, on te le demande.
   if(force && PAUSE.tache){
-    const rendu = Math.min(CREDIT_MAX, Math.floor((Date.now()-PAUSE.debut)/1000));
+    const ouvert = Math.floor((Date.now()-PAUSE.debut)/1000);
+    let rendu = ouvert;
+    if(ouvert > 6*60){
+      const rep = prompt('Cet écran est resté ouvert '+hms(ouvert)+'.\nCombien de ces minutes as-tu réellement travaillé ?', String(Math.round(ouvert/60)));
+      if(rep===null) return;                       // annulé : on ne touche à rien
+      const n = parseInt(String(rep).replace(',','.').trim(),10);
+      if(isNaN(n)||n<0||n>600){ toast('Donne un nombre de minutes (0 à 600)'); return; }
+      rendu = n*60;
+    }
     if(rendu > 0){
       TIMER.passe[PAUSE.tache] = (TIMER.passe[PAUSE.tache]||0) + rendu;
       delete TIMER.auto[PAUSE.tache];
@@ -1432,6 +1454,7 @@ function finPause(force){
   saveTimer();
   const t = PAUSE.tache; PAUSE = null;
   $('pauseOverlay').classList.remove('on');
+  document.title = 'Aujourd\'hui';
   if(LIBRES[t]) chrono(t);
   else if(t && EVENTS.filter(function(x){return x.id===t;})[0] && !isDone(EVENTS.filter(function(x){return x.id===t;})[0])) chrono(t);
   else render();
@@ -1443,6 +1466,9 @@ $('pausePlus').addEventListener('click',function(){ if(PAUSE){ PAUSE.fin += (PAU
 $('pauseDeja').addEventListener('click',function(){ finPause(true); });
 $('pauseNow').addEventListener('click',function(){ ouvrirPause('Pause prise à ta demande.'); });
 $('dayTxt').addEventListener('click',corrigerTotal);
+/* Les notifications système sont le seul moyen de te joindre quand le tableau
+   est derrière une autre fenêtre : on demande l'autorisation dès le départ. */
+try{ if('Notification' in window && Notification.permission==='default') Notification.requestPermission(); }catch(e){}
 $('adminBtn').addEventListener('click',function(){ chrono(ADMIN); });
 $('persoBtn').addEventListener('click',function(){ chrono(PERSOCHR); });
 
