@@ -179,6 +179,9 @@
   #adminBtn{ margin-left:auto; font-variant-numeric:tabular-nums; }
   #adminBtn.on{ background:#2f2a22; border-color:#2f2a22; color:#fff; }
   #adminBtn.a-fait{ border-color:#cfe0c6; background:#f2f7f0; color:#5f8a55; }
+  #persoBtn{ margin-left:6px; font-variant-numeric:tabular-nums; }
+  #persoBtn.on{ background:#a3663a; border-color:#a3663a; color:#fff; }
+  #persoBtn.a-fait{ border-color:#f0dcc9; background:#fbf2ea; color:#a3663a; }
   .persohint{ font-size:12px; font-weight:700; color:#a3663a; margin-top:7px; }
   .persohint:empty{ display:none; }
   .persohint span{ font-weight:600; color:#c0a58e; }
@@ -279,7 +282,7 @@
   <!-- ============ ONGLET AUJOURD'HUI ============ -->
   <section class="pane" id="pane-today">
     <div class="daycard" id="daycard">
-      <div class="dayline"><span class="dayico">⏱</span><span class="daytxt" id="dayTxt">0 min / 4h00</span><span class="daytask" id="dayTask"></span><button class="pausebtn" id="adminBtn" title="Chrono pour le temps admin sans tâche : mails, tableau, rangement">⚙️ admin</button><button class="pausebtn" id="pauseNow" title="Prendre ma pause maintenant">☕ pause</button></div>
+      <div class="dayline"><span class="dayico">⏱</span><span class="daytxt" id="dayTxt">0 min / 4h00</span><span class="daytask" id="dayTask"></span><button class="pausebtn" id="adminBtn" title="Chrono pour le temps admin sans tâche : mails, tableau, rangement">⚙️ admin</button><button class="pausebtn" id="persoBtn" title="Chrono pour du perso sans tâche — compté hors des 4 h">🏠 perso</button><button class="pausebtn" id="pauseNow" title="Prendre ma pause maintenant">☕ pause</button></div>
       <div class="daybar" id="dayBar"><i id="dayFill"></i></div>
       <div class="dayhint" id="dayHint"></div>
       <div class="persohint" id="persoHint"></div>
@@ -409,7 +412,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-08-23';
+const VERSION='2026-09-09-24';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -846,39 +849,54 @@ async function doRollover(list){
   }catch(err){ toast('⚠️ '+err.message); }
   $('closeDay').disabled=false;
 }
-/* Le temps admin est écrit dans l'agenda à CHAQUE arrêt du chrono, pas
-   seulement à la clôture : sans ça il disparaîtrait à minuit avec le compteur.
+/* Deux chronos « libres », sans tâche d'agenda attitrée :
+   - ADMIN  : du travail (mails, tableau, rangement) → compte dans les 4 h ;
+   - PERSO  : du perso → compté à part, hors des 4 h.
+   Leur temps est écrit dans l'agenda à CHAQUE arrêt du chrono, pas seulement à
+   la clôture : sans ça il disparaîtrait à minuit avec le compteur du jour.
    Le même événement est mis à jour au fil de la journée, jamais dupliqué. */
-let syncAdminEnCours=false;
-async function syncAdmin(){
-  if(syncAdminEnCours) return;
-  const t = ecoule(ADMIN);                  // marche aussi chrono en marche
-  if(t < 60) return;                       // moins d'une minute : rien à garder
-  if(TIMER.adminEcrit === t) return;        // déjà enregistré à cette valeur
-  const deb = new Date(TIMER.adminDebut || (Date.now()-t*1000));
+const ADMIN='__admin';
+const PERSOCHR='__perso';
+const LIBRES={};
+LIBRES[ADMIN]={ titre:'⚙️ Admin', desc:'Temps admin cumulé de la journée : mails, tableau, rangement.',
+  agenda:function(){ return PRIMARY; }, cleDebut:'adminDebut', cleEvent:'adminEventId', cleEcrit:'adminEcrit' };
+LIBRES[PERSOCHR]={ titre:'🏠 Perso', desc:'Temps perso cumulé de la journée, hors des 4 h de travail.',
+  agenda:function(){ return CAL_PERSO; }, cleDebut:'persoDebut', cleEvent:'persoEventId', cleEcrit:'persoEcrit' };
+
+let syncEnCours=false;
+async function syncLibre(id){
+  const cfg = LIBRES[id]; if(!cfg) return;
+  if(syncEnCours) return;
+  const t = ecoule(id);                     // marche aussi chrono en marche
+  if(t < 60) return;                        // moins d'une minute : rien à garder
+  if(TIMER[cfg.cleEcrit] === t) return;     // déjà enregistré à cette valeur
+  const deb = new Date(TIMER[cfg.cleDebut] || (Date.now()-t*1000));
   const fin = new Date(deb.getTime() + t*1000);
+  const cal = encodeURIComponent(cfg.agenda());
   const corps = {
-    summary:'✅ ⚙️ Admin — '+hms(t),
-    description:'Temps admin cumulé de la journée : mails, tableau, rangement.',
+    summary:'✅ '+cfg.titre+' — '+hms(t),
+    description:cfg.desc,
     start:{dateTime:offISO(deb),timeZone:'Europe/Paris'},
     end:{dateTime:offISO(fin),timeZone:'Europe/Paris'},
     transparency:'transparent'
   };
-  syncAdminEnCours=true;
+  syncEnCours=true;
   try{
-    if(TIMER.adminEventId){
-      await gfetch('PATCH','/calendars/'+encodeURIComponent(PRIMARY)+'/events/'+encodeURIComponent(TIMER.adminEventId), corps);
+    if(TIMER[cfg.cleEvent]){
+      await gfetch('PATCH','/calendars/'+cal+'/events/'+encodeURIComponent(TIMER[cfg.cleEvent]), corps);
     } else {
-      const r = await gfetch('POST','/calendars/'+encodeURIComponent(PRIMARY)+'/events', corps);
-      if(r && r.id) TIMER.adminEventId = r.id;
+      const r = await gfetch('POST','/calendars/'+cal+'/events', corps);
+      if(r && r.id) TIMER[cfg.cleEvent] = r.id;
     }
-    TIMER.adminEcrit = t; saveTimer();
-  }catch(err){ toast('⚠️ Admin non enregistré : '+err.message); }
-  finally{ syncAdminEnCours=false; }
+    TIMER[cfg.cleEcrit] = t; saveTimer();
+  }catch(err){ toast('⚠️ '+cfg.titre+' non enregistré : '+err.message); }
+  finally{ syncEnCours=false; }
 }
+async function syncAdmin(){ return syncLibre(ADMIN); }
 async function archiverAdmin(){
-  if(TIMER.enCours===ADMIN) stopChrono();
-  await syncAdmin();
+  if(TIMER.enCours===ADMIN || TIMER.enCours===PERSOCHR) stopChrono();
+  await syncLibre(ADMIN);
+  await syncLibre(PERSOCHR);
 }
 $('closeDay').addEventListener('click',async ()=>{
   await archiverAdmin();
@@ -1261,11 +1279,9 @@ function ecoule(id){
    - PERSO : compté à part, affiché en dessous, il ne mange pas les 4 h.
    On ne compte que les tâches encore présentes dans la journée : sans ça, une
    tâche supprimée ou reportée laissait son temps dans le total. */
-/* Temps admin : mails, tableau, rangement — du travail sans tâche attitrée.
-   Ce n'est pas un événement d'agenda, mais son temps compte dans les 4 h. */
-const ADMIN='__admin';
 function estPersoId(id){
   if(id===ADMIN) return false;
+  if(id===PERSOCHR) return true;
   try{ const e=EVENTS.filter(function(x){return x.id===id;})[0]; return e ? estPerso(e) : false; }
   catch(err){ return false; }
 }
@@ -1279,7 +1295,7 @@ function totauxJour(){
     }
   }catch(e){ vivants = null; }
   for(const k in TIMER.passe){
-    if(vivants && !vivants[k] && k!==ADMIN) continue;
+    if(vivants && !vivants[k] && k!==ADMIN && k!==PERSOCHR) continue;
     if(estPersoId(k)) perso += TIMER.passe[k]; else pro += TIMER.passe[k];
   }
   if(TIMER.enCours){
@@ -1414,7 +1430,7 @@ function finPause(force){
   saveTimer();
   const t = PAUSE.tache; PAUSE = null;
   $('pauseOverlay').classList.remove('on');
-  if(t===ADMIN) chrono(ADMIN);
+  if(LIBRES[t]) chrono(t);
   else if(t && EVENTS.filter(function(x){return x.id===t;})[0] && !isDone(EVENTS.filter(function(x){return x.id===t;})[0])) chrono(t);
   else render();
 }
@@ -1426,6 +1442,7 @@ $('pauseDeja').addEventListener('click',function(){ finPause(true); });
 $('pauseNow').addEventListener('click',function(){ ouvrirPause('Pause prise à ta demande.'); });
 $('dayTxt').addEventListener('click',corrigerTotal);
 $('adminBtn').addEventListener('click',function(){ chrono(ADMIN); });
+$('persoBtn').addEventListener('click',function(){ chrono(PERSOCHR); });
 
 /* ---- démarrer / mettre en pause ---- */
 function chrono(id){
@@ -1433,7 +1450,8 @@ function chrono(id){
   if(TIMER.enCours===id){ stopChrono(); render(); if(!pauseSiCaTombeBien()) render(); return; }
   stopChrono();
   TIMER.enCours=id; TIMER.depuis=Date.now();
-  if(id===ADMIN && !TIMER.adminDebut) TIMER.adminDebut=Date.now();  // 1er admin du jour
+  if(id===ADMIN && !TIMER.adminDebut) TIMER.adminDebut=Date.now();   // 1er admin du jour
+  if(id===PERSOCHR && !TIMER.persoDebut) TIMER.persoDebut=Date.now(); // 1er perso du jour
   saveTimer();
   try{ if('Notification' in window && Notification.permission==='default') Notification.requestPermission(); }catch(e){}
   bip(1); render();
@@ -1444,10 +1462,18 @@ function stopChrono(){
     TIMER.passe[quoi]=(TIMER.passe[quoi]||0)+Math.floor((Date.now()-TIMER.depuis)/1000);
     TIMER.enCours=null; TIMER.depuis=0; saveTimer();
     // l'admin n'a pas de tâche d'agenda : on l'écrit tout de suite, à chaque arrêt
-    if(quoi===ADMIN){ try{ syncAdmin(); }catch(e){} }
+    if(LIBRES[quoi]){ try{ syncLibre(quoi); }catch(e){} }
   }
 }
 
+function majBoutonLibre(btnId, id, label, aide){
+  const b=$(btnId); if(!b) return;
+  const e=ecoule(id), actif=(TIMER.enCours===id);
+  b.textContent = e>0 ? (label+' '+mmss(e)) : label;
+  b.classList.toggle('on', actif);
+  b.classList.toggle('a-fait', !actif && e>0);
+  b.title = actif ? 'Chrono en cours — clique pour arrêter' : aide;
+}
 /* ---- rafraîchissement chaque seconde ---- */
 function majBandeau(){
   const t=totalJour();
@@ -1458,16 +1484,10 @@ function majBandeau(){
   c.classList.toggle('warn', t>=CAP_WARN && t<CAP);
   c.classList.toggle('over', t>=CAP);
   const ev = TIMER.enCours ? EVENTS.filter(x=>x.id===TIMER.enCours)[0] : null;
-  $('dayTask').textContent = (TIMER.enCours===ADMIN) ? '▶ Admin' : (ev ? ('▶ '+displayTitle(ev)) : '');
-  const ab=$('adminBtn');
-  if(ab){
-    const e=ecoule(ADMIN), actif=(TIMER.enCours===ADMIN);
-    ab.textContent = e>0 ? ('⚙️ admin '+mmss(e)) : '⚙️ admin';
-    ab.classList.toggle('on', actif);
-    ab.classList.toggle('a-fait', !actif && e>0);
-    ab.title = actif ? 'Chrono admin en cours — clique pour arrêter'
-                     : 'Chrono pour le temps admin sans tâche : mails, tableau, rangement';
-  }
+  $('dayTask').textContent = LIBRES[TIMER.enCours] ? ('▶ '+LIBRES[TIMER.enCours].titre.replace(/^\S+\s/,''))
+                           : (ev ? ('▶ '+displayTitle(ev)) : '');
+  majBoutonLibre('adminBtn', ADMIN, '⚙️ admin', 'Chrono pour le temps admin sans tâche : mails, tableau, rangement');
+  majBoutonLibre('persoBtn', PERSOCHR, '🏠 perso', 'Chrono pour du perso sans tâche — compté hors des 4 h');
   $('dayHint').textContent = t>=CAP_MAX ? '4h30. C\'est ta limite absolue. Tu fermes.'
     : (t>=CAP ? 'Tes 4 h sont faites. Tu ne continues que si la journée l\'exige — 4h30 grand maximum.'
     : (t>=CAP_WARN ? 'Plus que '+hms(CAP-t)+' avant tes 4 h.' : ''));
@@ -1537,7 +1557,7 @@ function tic(){
   if(PAUSE) majPause();
   else if(TIMER.enCours && sansPause()>=BLOC) ouvrirPause('45 minutes d\'affilée. On coupe ici, même au milieu.');
   // filet : si le chrono admin tourne longtemps sans être arrêté, on enregistre quand même
-  if(TIMER.enCours===ADMIN && ecoule(ADMIN)%120===0){ try{ syncAdmin(); }catch(e){} }
+  if(LIBRES[TIMER.enCours] && ecoule(TIMER.enCours)%120===0){ try{ syncLibre(TIMER.enCours); }catch(e){} }
   majBandeau(); majChips(); verifAlarmes();
 }
 setInterval(tic,1000);
