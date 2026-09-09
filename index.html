@@ -189,6 +189,9 @@
   .pausehint{ font-size:11.5px; color:#b7b0a1; margin-top:5px; }
   .pausehint:empty{ display:none; }
   .pausehint.soon{ color:#a5683a; font-weight:600; }
+  .notifligne{ font-size:11.5px; color:#a4442c; margin-top:6px; }
+  .notifligne:empty{ display:none; }
+  .notifligne button{ border:1px solid #f3ccc2; background:#fdeeea; color:#a4442c; border-radius:20px; padding:2px 9px; font-size:11px; font-weight:700; font-family:inherit; cursor:pointer; margin-left:4px; }
   .resetlink{ display:block; margin-top:6px; background:none; border:none; padding:0; font-family:inherit; font-size:11px; color:#c3bcaa; text-decoration:underline; cursor:pointer; }
   .resetlink:hover{ color:#a5683a; }
   .resetlink.undo{ color:#a5683a; font-weight:700; }
@@ -291,6 +294,7 @@
       <div class="dayhint" id="dayHint"></div>
       <div class="persohint" id="persoHint"></div>
       <div class="pausehint" id="pauseHint"></div>
+      <div class="notifligne" id="notifLigne"></div>
     </div>
     <div id="status" class="spin">Chargement de ta journée…</div>
     <div id="content" style="display:none">
@@ -417,7 +421,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-09-26';
+const VERSION='2026-09-09-27';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -1349,25 +1353,65 @@ function hms(s){ s=Math.max(0,Math.round(s)); const h=Math.floor(s/3600), m=Math
   return h? (h+'h'+pad(m)) : (m+' min'); }
 function mmss(s){ s=Math.max(0,Math.round(s)); return pad(Math.floor(s/60))+':'+pad(s%60); }
 
-/* ---- son + notification ---- */
+/* ---- son + notification ----
+   Le navigateur refuse de créer du son tant que tu n'as rien cliqué. On ouvre
+   donc le canal audio dès ton premier clic sur la page, pour qu'il soit prêt
+   quand l'alarme sonnera — souvent à un moment où tu ne cliques rien. */
 let AUDIO=null;
-function bip(n){
+function ouvrirAudio(){
   try{
     if(!AUDIO) AUDIO=new (window.AudioContext||window.webkitAudioContext)();
     if(AUDIO.state==='suspended') AUDIO.resume();
+    // petit son muet : certains navigateurs n'ouvrent le canal qu'après un vrai son
+    const o=AUDIO.createOscillator(), g=AUDIO.createGain();
+    g.gain.setValueAtTime(0.0001,AUDIO.currentTime);
+    o.connect(g); g.connect(AUDIO.destination);
+    o.start(); o.stop(AUDIO.currentTime+0.03);
+  }catch(e){}
+}
+document.addEventListener('pointerdown',ouvrirAudio,{once:false,passive:true});
+document.addEventListener('keydown',ouvrirAudio,{passive:true});
+
+function bip(n,fort){
+  try{
+    if(!AUDIO) AUDIO=new (window.AudioContext||window.webkitAudioContext)();
+    if(AUDIO.state==='suspended') AUDIO.resume();
+    const vol = fort ? 0.6 : 0.25;
     for(let i=0;i<(n||1);i++){
       const o=AUDIO.createOscillator(), g=AUDIO.createGain(), t=AUDIO.currentTime+i*0.45;
-      o.frequency.setValueAtTime(880,t);
+      o.type='triangle';
+      o.frequency.setValueAtTime(fort?660:880,t);
       g.gain.setValueAtTime(0.0001,t);
-      g.gain.exponentialRampToValueAtTime(0.25,t+0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001,t+0.35);
-      o.connect(g); g.connect(AUDIO.destination); o.start(t); o.stop(t+0.42);
+      g.gain.exponentialRampToValueAtTime(vol,t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+0.38);
+      o.connect(g); g.connect(AUDIO.destination); o.start(t); o.stop(t+0.44);
     }
   }catch(e){}
 }
 function notifier(titre,corps){
-  try{ if('Notification' in window && Notification.permission==='granted') new Notification(titre,{body:corps,tag:'td'}); }catch(e){}
+  try{
+    if('Notification' in window && Notification.permission==='granted'){
+      new Notification(titre,{body:corps,tag:'td',renotify:true,requireInteraction:true});
+    }
+  }catch(e){}
   toast(titre);
+}
+/* État des notifications système : sans elles, rien ne peut te joindre
+   quand le tableau est derrière une autre fenêtre. */
+function majNotifLigne(){
+  const el=$('notifLigne'); if(!el) return;
+  let etat='non';
+  try{ if('Notification' in window) etat=Notification.permission; }catch(e){ etat='non'; }
+  if(etat==='granted'){ el.innerHTML=''; return; }
+  if(etat==='denied'){
+    el.innerHTML='🔕 Notifications bloquées — sans elles, seul le son peut te prévenir. À réautoriser dans les réglages du navigateur.';
+    return;
+  }
+  el.innerHTML='🔕 Notifications désactivées. <button id="notifGo">Les activer</button>';
+  const b=$('notifGo');
+  if(b) b.addEventListener('click',function(){
+    try{ Notification.requestPermission().then(majNotifLigne); }catch(e){}
+  });
 }
 
 /* ================= PAUSE TOUTES LES 45 MIN =================
@@ -1398,7 +1442,7 @@ function ouvrirPause(pourquoi){
   PAUSE = {debut:Date.now(), fin:Date.now()+PAUSE_COURTE*1000, tache:tache, sonne:0};
   $('pauseWhy').textContent = pourquoi || 'Tu te lèves. Tu ne restes pas devant l\'écran.';
   $('pauseOverlay').classList.add('on');
-  bip(3); notifier('☕ Pause','Lève-toi, bouge, regarde ailleurs que l\'écran.');
+  bip(4,true); notifier('☕ Pause','Lève-toi, bouge, regarde ailleurs que l\'écran.');
   majPause(); render();
 }
 function majPause(){
@@ -1417,12 +1461,12 @@ function majPause(){
   // Depuis combien de temps cet écran attend : si tu ne l'as pas vu, tu le sais.
   $('pauseDepuis').textContent = (ouvertDepuis > PAUSE_COURTE+60)
     ? 'Cet écran est ouvert depuis '+hms(ouvertDepuis)+'.' : '';
-  if(fini && !PAUSE.sonne){ PAUSE.sonne=1; bip(2); notifier('☕ Pause finie','Tu peux reprendre.'); }
+  if(fini && !PAUSE.sonne){ PAUSE.sonne=1; bip(4,true); notifier('☕ Pause finie','Tu peux reprendre.'); }
   // Tant que tu n'as pas cliqué, on continue de te rappeler — toutes les 30 s.
   if(!PAUSE.dernierRappel) PAUSE.dernierRappel = Date.now();
   if(Date.now()-PAUSE.dernierRappel > 30000){
     PAUSE.dernierRappel = Date.now();
-    bip(2);
+    bip(3,true);
     notifier(fini?'☕ Pause finie':'☕ Pause en cours', fini?'Reviens sur le tableau pour reprendre.':'Lève-toi, ne reste pas devant l\'écran.');
   }
   document.title = (fini?'⏸ PAUSE FINIE — ':'⏸ PAUSE — ')+'Aujourd\'hui';
@@ -1468,7 +1512,8 @@ $('pauseNow').addEventListener('click',function(){ ouvrirPause('Pause prise à t
 $('dayTxt').addEventListener('click',corrigerTotal);
 /* Les notifications système sont le seul moyen de te joindre quand le tableau
    est derrière une autre fenêtre : on demande l'autorisation dès le départ. */
-try{ if('Notification' in window && Notification.permission==='default') Notification.requestPermission(); }catch(e){}
+try{ if('Notification' in window && Notification.permission==='default') Notification.requestPermission().then(majNotifLigne); }catch(e){}
+majNotifLigne();
 $('adminBtn').addEventListener('click',function(){ chrono(ADMIN); });
 $('persoBtn').addEventListener('click',function(){ chrono(PERSOCHR); });
 
@@ -1550,26 +1595,26 @@ function majChips(){
 function verifAlarmes(){
   const n=new Date(), hhmm=pad(n.getHours())+':'+pad(n.getMinutes());
   if(hhmm===H_VIDE_TETE && !TIMER.alertes.vt){
-    TIMER.alertes.vt=1; saveTimer(); stopChrono(); bip(3);
+    TIMER.alertes.vt=1; saveTimer(); stopChrono(); bip(3,true);
     notifier('⏰ Vide-tête — tes 4 h sont finies','Note tout ce qui te vient. Tu ne traites rien.');
     showTab('today'); brainOpen=true; saveJSON('td_brainopen',true); applyBrainOpen();
     try{ $('bdText').focus(); }catch(e){}
   }
   if(hhmm===H_FIN && !TIMER.alertes.fin){
-    TIMER.alertes.fin=1; saveTimer(); stopChrono(); bip(4);
+    TIMER.alertes.fin=1; saveTimer(); stopChrono(); bip(4,true);
     notifier('🌿 17h45 — tu fermes','Programme ton vide-tête pour demain, puis récupération.'); render();
   }
   const t=totalJour();
   if(t>=CAP_WARN && t<CAP && !TIMER.alertes.warn){
-    TIMER.alertes.warn=1; saveTimer(); bip(2);
+    TIMER.alertes.warn=1; saveTimer(); bip(2,true);
     notifier('\u23f3 3h45 \u2014 plus que 15 min', 'Commence \u00e0 refermer. Ne lance rien de neuf.');
   }
   if(t>=CAP && !TIMER.alertes.cap){
-    TIMER.alertes.cap=1; saveTimer(); bip(3);
+    TIMER.alertes.cap=1; saveTimer(); bip(3,true);
     notifier('🛑 4 heures faites','Tu ne continues que si la journée l\'exige. 4h30 grand maximum.');
   }
   if(t>=CAP_MAX && !TIMER.alertes.capmax){
-    TIMER.alertes.capmax=1; saveTimer(); stopChrono(); bip(5);
+    TIMER.alertes.capmax=1; saveTimer(); stopChrono(); bip(5,true);
     notifier('🛑 4h30 — limite absolue','Tu fermes maintenant.'); render();
   }
   if(TIMER.enCours){
