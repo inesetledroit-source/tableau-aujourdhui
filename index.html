@@ -425,7 +425,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-10-35';
+const VERSION='2026-09-10-36';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -1624,8 +1624,8 @@ function majChips(){
 }
 /* Ces repères suivent TON COMPTEUR, jamais l'heure qu'il est : ta journée peut
    commencer à n'importe quelle heure.
-   Sonnent : 3h45 et 4 h (comme les pauses).
-   Silencieux : 4h30 et les dépassements de tâche — notification seule. */
+   Sonnent : 3h45, 4 h et 4h30 (comme les pauses).
+   Silencieux : les dépassements de tâche — notification seule. */
 function verifAlarmes(){
   const t=totalJour();
   if(t>=CAP_WARN && t<CAP && !TIMER.alertes.warn){
@@ -1639,7 +1639,7 @@ function verifAlarmes(){
     try{ $('bdText').focus(); }catch(e){}
   }
   if(t>=CAP_MAX && !TIMER.alertes.capmax){
-    TIMER.alertes.capmax=1; saveTimer(); stopChrono();
+    TIMER.alertes.capmax=1; saveTimer(); stopChrono(); bip(10,true);
     notifier('\ud83d\uded1 4h30 \u2014 limite absolue','Tu fermes maintenant.'); render();
   }
   if(TIMER.enCours){
