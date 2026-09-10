@@ -425,7 +425,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-10-33';
+const VERSION='2026-09-10-34';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -1233,8 +1233,7 @@ $('agGo').addEventListener('click',doAgenda);
 const CAP = 4*3600;              // plafond normal : 4h
 const CAP_MAX = 4.5*3600;        // limite absolue : 4h30
 const CAP_WARN = 3.75*3600;      // alerte à 3h45
-const H_VIDE_TETE = '17:30';     // les 4h sont finies -> vide-tête (en plus)
-const H_FIN = '17:45';           // fin du vide-tête -> récupération
+/* Anciennes heures fixes 17h30 / 17h45 : supprimées. Tout suit le compteur. */
 const DUREE_DEFAUT = 30*60;      // si la tâche n'a pas de durée
 
 /* ---- pauses ----
@@ -1558,7 +1557,7 @@ function chrono(id){
   if(id===PERSOCHR && !TIMER.persoDebut) TIMER.persoDebut=Date.now(); // 1er perso du jour
   saveTimer();
   try{ if('Notification' in window && Notification.permission==='default') Notification.requestPermission(); }catch(e){}
-  bip(1); render();
+  render();   // pas de son au lancement d'un chrono : le son est pour les pauses
 }
 function stopChrono(){
   if(TIMER.enCours){
@@ -1623,36 +1622,30 @@ function majChips(){
     el.classList.toggle('actif', TIMER.enCours===id);
   });
 }
+/* Ces repères suivent TON COMPTEUR, jamais l'heure qu'il est : ta journée peut
+   commencer à n'importe quelle heure. Et ils ne font AUCUN bruit — le son est
+   réservé aux pauses. Ce sont de simples notifications. */
 function verifAlarmes(){
-  const n=new Date(), hhmm=pad(n.getHours())+':'+pad(n.getMinutes());
-  if(hhmm===H_VIDE_TETE && !TIMER.alertes.vt){
-    TIMER.alertes.vt=1; saveTimer(); stopChrono(); bip(3,true);
-    notifier('⏰ Vide-tête — tes 4 h sont finies','Note tout ce qui te vient. Tu ne traites rien.');
+  const t=totalJour();
+  if(t>=CAP_WARN && t<CAP && !TIMER.alertes.warn){
+    TIMER.alertes.warn=1; saveTimer();
+    notifier('\u23f3 3h45 \u2014 plus que 15 min','Commence \u00e0 refermer. Ne lance rien de neuf.');
+  }
+  if(t>=CAP && !TIMER.alertes.cap){
+    TIMER.alertes.cap=1; saveTimer(); stopChrono();
+    notifier('\ud83d\uded1 Tes 4 heures sont faites','Vide-t\u00eate : note tout ce qui te vient, tu ne traites rien.');
     showTab('today'); brainOpen=true; saveJSON('td_brainopen',true); applyBrainOpen();
     try{ $('bdText').focus(); }catch(e){}
   }
-  if(hhmm===H_FIN && !TIMER.alertes.fin){
-    TIMER.alertes.fin=1; saveTimer(); stopChrono(); bip(4,true);
-    notifier('🌿 17h45 — tu fermes','Programme ton vide-tête pour demain, puis récupération.'); render();
-  }
-  const t=totalJour();
-  if(t>=CAP_WARN && t<CAP && !TIMER.alertes.warn){
-    TIMER.alertes.warn=1; saveTimer(); bip(2,true);
-    notifier('\u23f3 3h45 \u2014 plus que 15 min', 'Commence \u00e0 refermer. Ne lance rien de neuf.');
-  }
-  if(t>=CAP && !TIMER.alertes.cap){
-    TIMER.alertes.cap=1; saveTimer(); bip(3,true);
-    notifier('🛑 4 heures faites','Tu ne continues que si la journée l\'exige. 4h30 grand maximum.');
-  }
   if(t>=CAP_MAX && !TIMER.alertes.capmax){
-    TIMER.alertes.capmax=1; saveTimer(); stopChrono(); bip(5,true);
-    notifier('🛑 4h30 — limite absolue','Tu fermes maintenant.'); render();
+    TIMER.alertes.capmax=1; saveTimer(); stopChrono();
+    notifier('\ud83d\uded1 4h30 \u2014 limite absolue','Tu fermes maintenant.'); render();
   }
   if(TIMER.enCours){
     const ev=EVENTS.filter(x=>x.id===TIMER.enCours)[0];
     if(ev && ecoule(ev.id)>alloue(ev) && !TIMER.alertes['d_'+ev.id]){
-      TIMER.alertes['d_'+ev.id]=1; saveTimer(); bip(2);
-      notifier('⏱ Temps dépassé', displayTitle(ev)+' — tu as dépassé le temps prévu.');
+      TIMER.alertes['d_'+ev.id]=1; saveTimer();
+      notifier('\u23f1 Temps d\u00e9pass\u00e9', displayTitle(ev)+' \u2014 tu as d\u00e9pass\u00e9 le temps pr\u00e9vu.');
     }
   }
 }
