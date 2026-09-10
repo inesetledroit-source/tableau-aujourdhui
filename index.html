@@ -423,7 +423,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-10-30';
+const VERSION='2026-09-10-31';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -1401,38 +1401,17 @@ function notifier(titre,corps){
 }
 /* État des notifications système : sans elles, rien ne peut te joindre
    quand le tableau est derrière une autre fenêtre. */
-/* Bouton de test : joue l'alarme et envoie une vraie notification,
-   pour vérifier la chaîne complète sans attendre une pause. */
-function brancherTest(){
-  const t=$('notifTest'); if(!t) return;
-  t.addEventListener('click',function(){
-    ouvrirAudio(); bip(8,true);
-    let vue=false;
-    try{
-      if('Notification' in window && Notification.permission==='granted'){
-        const n=new Notification('☕ Test du tableau','Si tu vois ce message, les notifications marchent.');
-        vue=true;
-      }
-    }catch(e){}
-    toast(vue?'Son + notification envoyés':'Son envoyé (pas de notification)');
-  });
-}
 function majNotifLigne(){
   const el=$('notifLigne'); if(!el) return;
   let etat='non';
   try{ if('Notification' in window) etat=Notification.permission; }catch(e){ etat='non'; }
-  if(etat==='granted'){
-    el.className='notifligne ok';
-    el.innerHTML='🔔 Notifications actives. <button id="notifTest">tester l\'alarme</button>';
-    brancherTest(); return;
-  }
+  if(etat==='granted'){ el.className='notifligne'; el.innerHTML=''; return; }
   el.className='notifligne';
   if(etat==='denied'){
-    el.innerHTML='🔕 Notifications refusées pour ce site. Dans Safari : menu <b>Safari → Réglages → Sites web → Notifications</b>, trouve <b>inesetledroit-source.github.io</b> et mets <b>Autoriser</b>. Puis recharge. <button id="notifTest">tester le son</button>';
-    brancherTest(); return;
+    el.innerHTML='🔕 Notifications refusées pour ce site. Supprime l\'app du Dock puis recrée-la (Safari → Fichier → Ajouter au Dock) : l\'autorisation te sera reposée.';
+    return;
   }
-  el.innerHTML='🔕 Notifications désactivées. <button id="notifGo">Les activer</button> <button id="notifTest">tester le son</button>';
-  brancherTest();
+  el.innerHTML='🔕 Notifications désactivées. <button id="notifGo">Les activer</button>';
   const b=$('notifGo');
   // Safari n'accepte cette demande QUE depuis un vrai clic, et sa vieille
   // version passe par une fonction de rappel au lieu d'une promesse.
