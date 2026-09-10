@@ -425,7 +425,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-10-34';
+const VERSION='2026-09-10-35';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -1623,16 +1623,17 @@ function majChips(){
   });
 }
 /* Ces repères suivent TON COMPTEUR, jamais l'heure qu'il est : ta journée peut
-   commencer à n'importe quelle heure. Et ils ne font AUCUN bruit — le son est
-   réservé aux pauses. Ce sont de simples notifications. */
+   commencer à n'importe quelle heure.
+   Sonnent : 3h45 et 4 h (comme les pauses).
+   Silencieux : 4h30 et les dépassements de tâche — notification seule. */
 function verifAlarmes(){
   const t=totalJour();
   if(t>=CAP_WARN && t<CAP && !TIMER.alertes.warn){
-    TIMER.alertes.warn=1; saveTimer();
+    TIMER.alertes.warn=1; saveTimer(); bip(6,true);
     notifier('\u23f3 3h45 \u2014 plus que 15 min','Commence \u00e0 refermer. Ne lance rien de neuf.');
   }
   if(t>=CAP && !TIMER.alertes.cap){
-    TIMER.alertes.cap=1; saveTimer(); stopChrono();
+    TIMER.alertes.cap=1; saveTimer(); stopChrono(); bip(8,true);
     notifier('\ud83d\uded1 Tes 4 heures sont faites','Vide-t\u00eate : note tout ce qui te vient, tu ne traites rien.');
     showTab('today'); brainOpen=true; saveJSON('td_brainopen',true); applyBrainOpen();
     try{ $('bdText').focus(); }catch(e){}
