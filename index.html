@@ -205,6 +205,7 @@
   .pausebig{ font-size:52px; font-weight:700; color:#2f2a22; font-variant-numeric:tabular-nums; letter-spacing:-.02em; margin-bottom:18px; }
   .pauseacts{ display:flex; gap:10px; flex-direction:column; }
   .pauseacts button{ border-radius:12px; padding:12px; font-size:14px; font-weight:600; font-family:inherit; border:none; cursor:pointer; }
+  #pauseStart{ background:#2f2a22; color:#fff; }
   #pauseGo{ background:#2f2a22; color:#fff; }
   #pauseGo:disabled{ background:#efece4; color:#b7b0a1; cursor:not-allowed; }
   #pausePlus{ background:#f1eee7; color:#4a4438; }
@@ -410,6 +411,7 @@
   <div class="pausebig" id="pauseTime">05:00</div>
   <div class="pausedepuis" id="pauseDepuis"></div>
   <div class="pauseacts">
+    <button id="pauseStart">Je démarre ma pause</button>
     <button id="pauseGo" disabled>Reprendre</button>
     <button id="pausePlus">J'en prends 10 plutôt que 5</button>
     <button id="pauseDeja">Je viens déjà d'en prendre une — j'étais en train de travailler</button>
@@ -423,7 +425,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-10-31';
+const VERSION='2026-09-10-32';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -1450,41 +1452,63 @@ function ouvrirPause(pourquoi){
   if(PAUSE) return;
   const tache = TIMER.enCours;
   stopChrono();
-  PAUSE = {debut:Date.now(), fin:Date.now()+PAUSE_COURTE*1000, tache:tache, sonne:0};
+  // 3 temps : « à prendre » (ça sonne) → « en cours » (silence, ça décompte)
+  //           → « finie » (ça te rappelle de revenir).
+  PAUSE = {etat:'a-prendre', debut:Date.now(), fin:0, tache:tache, sonne:0, dernierRappel:Date.now()};
   $('pauseWhy').textContent = pourquoi || 'Tu te lèves. Tu ne restes pas devant l\'écran.';
   $('pauseOverlay').classList.add('on');
-  bip(8,true); notifier('☕ Pause','Lève-toi, bouge, regarde ailleurs que l\'écran.');
+  bip(8,true); notifier('☕ Pause','Clique sur « Je démarre ma pause » puis lève-toi.');
   majPause(); render();
+}
+function demarrerPause(){
+  if(!PAUSE || PAUSE.etat!=='a-prendre') return;
+  PAUSE.etat='en-cours';
+  PAUSE.fin = Date.now()+PAUSE_COURTE*1000;   // le décompte part MAINTENANT
+  PAUSE.dernierRappel = Date.now();
+  majPause();
 }
 function majPause(){
   if(!PAUSE) return;
-  const r = Math.max(0, Math.round((PAUSE.fin-Date.now())/1000));
-  const fini = r<=0;
+  const aPrendre = (PAUSE.etat==='a-prendre');
+  const r = aPrendre ? PAUSE_COURTE : Math.max(0, Math.round((PAUSE.fin-Date.now())/1000));
+  if(!aPrendre && r<=0) PAUSE.etat='finie';
+  const fini = (PAUSE.etat==='finie');
+  const enCours = (PAUSE.etat==='en-cours');
+
   $('pauseTime').textContent = mmss(r);
-  $('pauseTitle').textContent = fini ? 'Pause finie' : 'Pause';
+  $('pauseTitle').textContent = aPrendre ? 'Pause à prendre' : (fini ? 'Pause finie' : 'Pause en cours');
+  $('pauseStart').style.display = aPrendre ? 'block' : 'none';
+  $('pauseGo').style.display    = aPrendre ? 'none'  : 'block';
   $('pauseGo').disabled = !fini;
   $('pauseGo').textContent = fini ? 'Reprendre' : 'Reprendre — dans '+mmss(r);
-  $('pausePlus').style.display = fini ? 'none' : 'block';
-  $('pauseDeja').style.display = 'block';   // dispo aussi après la fin
+  $('pausePlus').style.display = enCours ? 'block' : 'none';
+  $('pauseDeja').style.display = 'block';
+  $('pauseDeja').textContent = aPrendre ? 'Je viens déjà d\'en prendre une — j\'étais en train de travailler'
+                                        : 'En fait je travaillais pendant ce temps-là';
   const ouvertDepuis = Math.floor((Date.now()-PAUSE.debut)/1000);
-  $('pauseDeja').textContent = fini ? 'En fait je travaillais pendant ce temps-là'
-                                    : 'Je viens déjà d\'en prendre une — j\'étais en train de travailler';
-  // Depuis combien de temps cet écran attend : si tu ne l'as pas vu, tu le sais.
-  $('pauseDepuis').textContent = (ouvertDepuis > PAUSE_COURTE+60)
-    ? 'Cet écran est ouvert depuis '+hms(ouvertDepuis)+'.' : '';
-  if(fini && !PAUSE.sonne){ PAUSE.sonne=1; bip(8,true); notifier('☕ Pause finie','Tu peux reprendre.'); }
-  // Tant que tu n'as pas cliqué, on continue de te rappeler — toutes les 30 s.
-  if(!PAUSE.dernierRappel) PAUSE.dernierRappel = Date.now();
-  if(Date.now()-PAUSE.dernierRappel > 15000){
+  $('pauseDepuis').textContent = (aPrendre && ouvertDepuis > 120)
+    ? 'Cet écran attend depuis '+hms(ouvertDepuis)+'.' : '';
+
+  if(fini && !PAUSE.sonne){ PAUSE.sonne=1; bip(8,true); notifier('☕ Pause finie','Tu peux revenir et reprendre.'); }
+
+  // Ça sonne pour te FAIRE partir, et pour te faire revenir.
+  // Pendant la pause elle-même : silence complet.
+  if(aPrendre && Date.now()-PAUSE.dernierRappel > 15000){
     PAUSE.dernierRappel = Date.now();
     bip(8,true);
-    notifier(fini?'☕ Pause finie':'☕ Pause en cours', fini?'Reviens sur le tableau pour reprendre.':'Lève-toi, ne reste pas devant l\'écran.');
+    notifier('☕ Pause à prendre','Clique sur « Je démarre ma pause » puis lève-toi.');
   }
-  document.title = (fini?'⏸ PAUSE FINIE — ':'⏸ PAUSE — ')+'Aujourd\'hui';
+  if(fini && Date.now()-PAUSE.dernierRappel > 60000){
+    PAUSE.dernierRappel = Date.now();
+    bip(4,true);
+    notifier('☕ Pause finie','Reviens sur le tableau pour reprendre.');
+  }
+  document.title = aPrendre ? '⏸ PAUSE À PRENDRE — Aujourd\'hui'
+                 : (fini ? '⏸ PAUSE FINIE — Aujourd\'hui' : '☕ pause… — Aujourd\'hui');
 }
 function finPause(force){
   if(!PAUSE) return;
-  if(!force && Date.now() < PAUSE.fin) return;
+  if(!force && PAUSE.etat!=='finie') return;
   // Cas « j'ai travaillé pendant que l'écran était affiché ». On ne devine pas
   // combien : au-delà de quelques minutes, on te le demande.
   if(force && PAUSE.tache){
@@ -1514,6 +1538,7 @@ function finPause(force){
   else if(t && EVENTS.filter(function(x){return x.id===t;})[0] && !isDone(EVENTS.filter(function(x){return x.id===t;})[0])) chrono(t);
   else render();
 }
+$('pauseStart').addEventListener('click',demarrerPause);
 $('pauseGo').addEventListener('click',function(){ finPause(false); });
 $('pausePlus').addEventListener('click',function(){ if(PAUSE){ PAUSE.fin += (PAUSE_LONGUE-PAUSE_COURTE)*1000; majPause(); } });
 /* Tu viens de faire une vraie pause sans le dire au tableau : on remet le
