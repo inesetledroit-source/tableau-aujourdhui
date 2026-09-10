@@ -425,7 +425,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-10-32';
+const VERSION='2026-09-10-33';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -1477,6 +1477,7 @@ function majPause(){
 
   $('pauseTime').textContent = mmss(r);
   $('pauseTitle').textContent = aPrendre ? 'Pause à prendre' : (fini ? 'Pause finie' : 'Pause en cours');
+  if(fini) $('pauseWhy').textContent = 'Reprends quand tu veux. Si tu as pris plus long, tant mieux.';
   $('pauseStart').style.display = aPrendre ? 'block' : 'none';
   $('pauseGo').style.display    = aPrendre ? 'none'  : 'block';
   $('pauseGo').disabled = !fini;
@@ -1489,19 +1490,13 @@ function majPause(){
   $('pauseDepuis').textContent = (aPrendre && ouvertDepuis > 120)
     ? 'Cet écran attend depuis '+hms(ouvertDepuis)+'.' : '';
 
-  if(fini && !PAUSE.sonne){ PAUSE.sonne=1; bip(8,true); notifier('☕ Pause finie','Tu peux revenir et reprendre.'); }
-
-  // Ça sonne pour te FAIRE partir, et pour te faire revenir.
-  // Pendant la pause elle-même : silence complet.
+  // Ça ne sonne QUE pour te faire partir. Une fois la pause lancée, plus aucun
+  // son : ni pendant, ni après. Une pause plus longue que prévu n'est pas un
+  // problème — le tableau attend, en silence.
   if(aPrendre && Date.now()-PAUSE.dernierRappel > 15000){
     PAUSE.dernierRappel = Date.now();
     bip(8,true);
     notifier('☕ Pause à prendre','Clique sur « Je démarre ma pause » puis lève-toi.');
-  }
-  if(fini && Date.now()-PAUSE.dernierRappel > 60000){
-    PAUSE.dernierRappel = Date.now();
-    bip(4,true);
-    notifier('☕ Pause finie','Reviens sur le tableau pour reprendre.');
   }
   document.title = aPrendre ? '⏸ PAUSE À PRENDRE — Aujourd\'hui'
                  : (fini ? '⏸ PAUSE FINIE — Aujourd\'hui' : '☕ pause… — Aujourd\'hui');
