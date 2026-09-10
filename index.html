@@ -192,6 +192,8 @@
   .notifligne{ font-size:11.5px; color:#a4442c; margin-top:6px; }
   .notifligne:empty{ display:none; }
   .notifligne button{ border:1px solid #f3ccc2; background:#fdeeea; color:#a4442c; border-radius:20px; padding:2px 9px; font-size:11px; font-weight:700; font-family:inherit; cursor:pointer; margin-left:4px; }
+  .notifligne.ok{ color:#7d8f74; }
+  .notifligne.ok button{ border-color:#dfe7da; background:#f2f7f0; color:#5f8a55; }
   .resetlink{ display:block; margin-top:6px; background:none; border:none; padding:0; font-family:inherit; font-size:11px; color:#c3bcaa; text-decoration:underline; cursor:pointer; }
   .resetlink:hover{ color:#a5683a; }
   .resetlink.undo{ color:#a5683a; font-weight:700; }
@@ -421,7 +423,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-09-29';
+const VERSION='2026-09-10-30';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -1399,16 +1401,38 @@ function notifier(titre,corps){
 }
 /* État des notifications système : sans elles, rien ne peut te joindre
    quand le tableau est derrière une autre fenêtre. */
+/* Bouton de test : joue l'alarme et envoie une vraie notification,
+   pour vérifier la chaîne complète sans attendre une pause. */
+function brancherTest(){
+  const t=$('notifTest'); if(!t) return;
+  t.addEventListener('click',function(){
+    ouvrirAudio(); bip(8,true);
+    let vue=false;
+    try{
+      if('Notification' in window && Notification.permission==='granted'){
+        const n=new Notification('☕ Test du tableau','Si tu vois ce message, les notifications marchent.');
+        vue=true;
+      }
+    }catch(e){}
+    toast(vue?'Son + notification envoyés':'Son envoyé (pas de notification)');
+  });
+}
 function majNotifLigne(){
   const el=$('notifLigne'); if(!el) return;
   let etat='non';
   try{ if('Notification' in window) etat=Notification.permission; }catch(e){ etat='non'; }
-  if(etat==='granted'){ el.innerHTML=''; return; }
-  if(etat==='denied'){
-    el.innerHTML='🔕 Notifications bloquées — sans elles, seul le son peut te prévenir. À réautoriser dans Réglages système → Notifications → Aujourd\'hui.';
-    return;
+  if(etat==='granted'){
+    el.className='notifligne ok';
+    el.innerHTML='🔔 Notifications actives. <button id="notifTest">tester l\'alarme</button>';
+    brancherTest(); return;
   }
-  el.innerHTML='🔕 Notifications désactivées. <button id="notifGo">Les activer</button>';
+  el.className='notifligne';
+  if(etat==='denied'){
+    el.innerHTML='🔕 Notifications refusées pour ce site. Dans Safari : menu <b>Safari → Réglages → Sites web → Notifications</b>, trouve <b>inesetledroit-source.github.io</b> et mets <b>Autoriser</b>. Puis recharge. <button id="notifTest">tester le son</button>';
+    brancherTest(); return;
+  }
+  el.innerHTML='🔕 Notifications désactivées. <button id="notifGo">Les activer</button> <button id="notifTest">tester le son</button>';
+  brancherTest();
   const b=$('notifGo');
   // Safari n'accepte cette demande QUE depuis un vrai clic, et sa vieille
   // version passe par une fonction de rappel au lieu d'une promesse.
