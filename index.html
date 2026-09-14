@@ -405,7 +405,7 @@
   <div class="mactions"><button class="btn btn-ghost" id="agCancel">Annuler</button><button class="btn btn-go" id="agGo">Créer</button></div>
 </div></div>
 <div class="overlay" id="pauseOverlay"><div class="pausebox">
-  <span class="pe">☕</span>
+  <span class="pe" id="pauseEmoji">☕</span>
   <h3 id="pauseTitle">Pause</h3>
   <p id="pauseWhy">Tu te lèves. Tu ne restes pas devant l'écran.</p>
   <div class="pausebig" id="pauseTime">05:00</div>
@@ -425,7 +425,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-10-37';
+const VERSION='2026-09-10-38';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -1243,6 +1243,11 @@ const BLOC = 45*60;
 const PLANCHER_PAUSE = 20*60;
 const PAUSE_COURTE = 5*60;
 const PAUSE_LONGUE = 10*60;
+/* Déjeuner forcé : 30 min, hors des 4 h. Deux déclencheurs, le premier qui
+   tombe gagne — 2 h de compteur, ou 13 h 30 à l'horloge. */
+const DEJ_DUREE   = 30*60;
+const DEJ_COMPTEUR= 2*3600;
+const DEJ_HEURE   = 13.5;
 
 function jourCourant(){ return ymd(new Date()); }
 let TIMER = loadJSON('td_timer', null);
@@ -1447,44 +1452,56 @@ function pauseSiCaTombeBien(){
   ouvrirPause('Tu as travaillé '+hms(fait)+' d\'affilée. La tâche suivante te ferait dépasser 45 min — autant couper maintenant, entre deux tâches.');
   return true;
 }
-function ouvrirPause(pourquoi){
+function ouvrirPause(pourquoi, dej){
   if(PAUSE) return;
   const tache = TIMER.enCours;
   stopChrono();
   // 3 temps : « à prendre » (ça sonne) → « en cours » (silence, ça décompte)
   //           → « finie » (ça te rappelle de revenir).
-  PAUSE = {etat:'a-prendre', debut:Date.now(), fin:0, tache:tache, sonne:0, dernierRappel:Date.now()};
+  PAUSE = {etat:'a-prendre', debut:Date.now(), fin:0, tache:tache, sonne:0, dernierRappel:Date.now(), dej:!!dej};
   $('pauseWhy').textContent = pourquoi || 'Tu te lèves. Tu ne restes pas devant l\'écran.';
+  $('pauseEmoji').textContent = dej ? '🍽️' : '☕';
   $('pauseOverlay').classList.add('on');
-  bip(10,true); notifier('☕ Pause','Clique sur « Je démarre ma pause » puis lève-toi.');
+  bip(10,true);
+  if(dej) notifier('🍽️ Déjeuner','Clique sur « Je démarre mon déjeuner » puis va manger.');
+  else    notifier('☕ Pause','Clique sur « Je démarre ma pause » puis lève-toi.');
   majPause(); render();
 }
 function demarrerPause(){
   if(!PAUSE || PAUSE.etat!=='a-prendre') return;
   PAUSE.etat='en-cours';
-  PAUSE.fin = Date.now()+PAUSE_COURTE*1000;   // le décompte part MAINTENANT
+  PAUSE.fin = Date.now()+(PAUSE.dej?DEJ_DUREE:PAUSE_COURTE)*1000;   // le décompte part MAINTENANT
   PAUSE.dernierRappel = Date.now();
   majPause();
 }
 function majPause(){
   if(!PAUSE) return;
   const aPrendre = (PAUSE.etat==='a-prendre');
-  const r = aPrendre ? PAUSE_COURTE : Math.max(0, Math.round((PAUSE.fin-Date.now())/1000));
+  const dej = !!PAUSE.dej;
+  const plein = dej ? DEJ_DUREE : PAUSE_COURTE;
+  const r = aPrendre ? plein : Math.max(0, Math.round((PAUSE.fin-Date.now())/1000));
   if(!aPrendre && r<=0) PAUSE.etat='finie';
   const fini = (PAUSE.etat==='finie');
   const enCours = (PAUSE.etat==='en-cours');
 
   $('pauseTime').textContent = mmss(r);
-  $('pauseTitle').textContent = aPrendre ? 'Pause à prendre' : (fini ? 'Pause finie' : 'Pause en cours');
+  $('pauseTitle').textContent = dej
+    ? (aPrendre ? 'Déjeuner à prendre' : (fini ? 'Déjeuner fini' : 'Déjeuner en cours'))
+    : (aPrendre ? 'Pause à prendre'    : (fini ? 'Pause finie'    : 'Pause en cours'));
   if(fini) $('pauseWhy').textContent = 'Reprends quand tu veux. Si tu as pris plus long, tant mieux.';
+  $('pauseStart').textContent = dej ? 'Je démarre mon déjeuner' : 'Je démarre ma pause';
+  $('pausePlus').textContent  = dej ? 'J\'en prends 45 plutôt que 30' : 'J\'en prends 10 plutôt que 5';
   $('pauseStart').style.display = aPrendre ? 'block' : 'none';
   $('pauseGo').style.display    = aPrendre ? 'none'  : 'block';
   $('pauseGo').disabled = !fini;
   $('pauseGo').textContent = fini ? 'Reprendre' : 'Reprendre — dans '+mmss(r);
   $('pausePlus').style.display = enCours ? 'block' : 'none';
   $('pauseDeja').style.display = 'block';
-  $('pauseDeja').textContent = aPrendre ? 'Je viens déjà d\'en prendre une — j\'étais en train de travailler'
-                                        : 'En fait je travaillais pendant ce temps-là';
+  $('pauseDeja').textContent = dej
+    ? (aPrendre ? 'J\'ai déjà déjeuné — j\'étais en train de travailler'
+                : 'En fait je travaillais pendant ce temps-là')
+    : (aPrendre ? 'Je viens déjà d\'en prendre une — j\'étais en train de travailler'
+                : 'En fait je travaillais pendant ce temps-là');
   const ouvertDepuis = Math.floor((Date.now()-PAUSE.debut)/1000);
   $('pauseDepuis').textContent = (aPrendre && ouvertDepuis > 120)
     ? 'Cet écran attend depuis '+hms(ouvertDepuis)+'.' : '';
@@ -1495,10 +1512,14 @@ function majPause(){
   if(aPrendre && Date.now()-PAUSE.dernierRappel > 15000){
     PAUSE.dernierRappel = Date.now();
     bip(10,true);
-    notifier('☕ Pause à prendre','Clique sur « Je démarre ma pause » puis lève-toi.');
+    if(dej) notifier('🍽️ Déjeuner à prendre','Clique sur « Je démarre mon déjeuner » puis va manger.');
+    else    notifier('☕ Pause à prendre','Clique sur « Je démarre ma pause » puis lève-toi.');
   }
-  document.title = aPrendre ? '⏸ PAUSE À PRENDRE — Aujourd\'hui'
-                 : (fini ? '⏸ PAUSE FINIE — Aujourd\'hui' : '☕ pause… — Aujourd\'hui');
+  document.title = dej
+    ? (aPrendre ? '🍽️ DÉJEUNER À PRENDRE — Aujourd\'hui'
+                : (fini ? '🍽️ DÉJEUNER FINI — Aujourd\'hui' : '🍽️ déjeuner… — Aujourd\'hui'))
+    : (aPrendre ? '⏸ PAUSE À PRENDRE — Aujourd\'hui'
+                : (fini ? '⏸ PAUSE FINIE — Aujourd\'hui' : '☕ pause… — Aujourd\'hui'));
 }
 function finPause(force){
   if(!PAUSE) return;
@@ -1534,7 +1555,7 @@ function finPause(force){
 }
 $('pauseStart').addEventListener('click',demarrerPause);
 $('pauseGo').addEventListener('click',function(){ finPause(false); });
-$('pausePlus').addEventListener('click',function(){ if(PAUSE){ PAUSE.fin += (PAUSE_LONGUE-PAUSE_COURTE)*1000; majPause(); } });
+$('pausePlus').addEventListener('click',function(){ if(PAUSE){ PAUSE.fin += (PAUSE.dej ? 15*60 : (PAUSE_LONGUE-PAUSE_COURTE))*1000; majPause(); } });
 /* Tu viens de faire une vraie pause sans le dire au tableau : on remet le
    compteur à zéro tout de suite. Ce n'est pas sauter la pause, c'est la déclarer. */
 $('pauseDeja').addEventListener('click',function(){ finPause(true); });
@@ -1622,12 +1643,34 @@ function majChips(){
     el.classList.toggle('actif', TIMER.enCours===id);
   });
 }
+/* ================= DÉJEUNER FORCÉ =================
+   Le seul endroit du tableau qui regarde l'horloge. Deux déclencheurs, le
+   premier qui tombe gagne :
+   - 2 h de compteur (le milieu de tes 4 h) ;
+   - 13 h 30, si tu as déjà commencé ta journée.
+   Le garde-fou 16 h 30 évite qu'un tableau ouvert le soir te réclame un
+   déjeuner. Une fois par jour, jamais deux. */
+function verifDejeuner(t){
+  if(PAUSE) return;
+  if(TIMER.alertes.dej) return;
+  const d = new Date();
+  const heure = d.getHours() + d.getMinutes()/60;
+  const parCompteur = (t >= DEJ_COMPTEUR);
+  const parHorloge  = (heure >= DEJ_HEURE && heure < DEJ_HEURE+3 && t > 0);
+  if(!parCompteur && !parHorloge) return;
+  TIMER.alertes.dej = 1; saveTimer();
+  ouvrirPause(parCompteur
+    ? 'Tu es à la moitié de tes 4 h. Tu manges maintenant, 30 min, loin de l\'écran.'
+    : 'Il est 13 h 30. Tu manges maintenant, 30 min, loin de l\'écran.', true);
+}
+
 /* Ces repères suivent TON COMPTEUR, jamais l'heure qu'il est : ta journée peut
    commencer à n'importe quelle heure.
    Sonnent : 3h45, 4 h et 4h30 (comme les pauses).
    Silencieux : les dépassements de tâche — notification seule. */
 function verifAlarmes(){
   const t=totalJour();
+  verifDejeuner(t);
   if(t>=CAP_WARN && t<CAP && !TIMER.alertes.warn){
     TIMER.alertes.warn=1; saveTimer(); bip(10,true);
     notifier('\u23f3 3h45 \u2014 plus que 15 min','Commence \u00e0 refermer. Ne lance rien de neuf.');
