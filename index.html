@@ -425,7 +425,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-10-36';
+const VERSION='2026-09-10-37';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -1456,7 +1456,7 @@ function ouvrirPause(pourquoi){
   PAUSE = {etat:'a-prendre', debut:Date.now(), fin:0, tache:tache, sonne:0, dernierRappel:Date.now()};
   $('pauseWhy').textContent = pourquoi || 'Tu te lèves. Tu ne restes pas devant l\'écran.';
   $('pauseOverlay').classList.add('on');
-  bip(8,true); notifier('☕ Pause','Clique sur « Je démarre ma pause » puis lève-toi.');
+  bip(10,true); notifier('☕ Pause','Clique sur « Je démarre ma pause » puis lève-toi.');
   majPause(); render();
 }
 function demarrerPause(){
@@ -1494,7 +1494,7 @@ function majPause(){
   // problème — le tableau attend, en silence.
   if(aPrendre && Date.now()-PAUSE.dernierRappel > 15000){
     PAUSE.dernierRappel = Date.now();
-    bip(8,true);
+    bip(10,true);
     notifier('☕ Pause à prendre','Clique sur « Je démarre ma pause » puis lève-toi.');
   }
   document.title = aPrendre ? '⏸ PAUSE À PRENDRE — Aujourd\'hui'
@@ -1629,11 +1629,11 @@ function majChips(){
 function verifAlarmes(){
   const t=totalJour();
   if(t>=CAP_WARN && t<CAP && !TIMER.alertes.warn){
-    TIMER.alertes.warn=1; saveTimer(); bip(6,true);
+    TIMER.alertes.warn=1; saveTimer(); bip(10,true);
     notifier('\u23f3 3h45 \u2014 plus que 15 min','Commence \u00e0 refermer. Ne lance rien de neuf.');
   }
   if(t>=CAP && !TIMER.alertes.cap){
-    TIMER.alertes.cap=1; saveTimer(); stopChrono(); bip(8,true);
+    TIMER.alertes.cap=1; saveTimer(); stopChrono(); bip(10,true);
     notifier('\ud83d\uded1 Tes 4 heures sont faites','Vide-t\u00eate : note tout ce qui te vient, tu ne traites rien.');
     showTab('today'); brainOpen=true; saveJSON('td_brainopen',true); applyBrainOpen();
     try{ $('bdText').focus(); }catch(e){}
