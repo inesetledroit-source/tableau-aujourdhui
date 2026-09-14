@@ -425,7 +425,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-10-38';
+const VERSION='2026-09-10-39';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -1648,15 +1648,16 @@ function majChips(){
    premier qui tombe gagne :
    - 2 h de compteur (le milieu de tes 4 h) ;
    - 13 h 30, si tu as déjà commencé ta journée.
-   Le garde-fou 16 h 30 évite qu'un tableau ouvert le soir te réclame un
-   déjeuner. Une fois par jour, jamais deux. */
+   Pas de limite haute : à 17 h sans avoir mangé, ça se déclenche quand même.
+   Seule condition, que la journée ait commencé — un tableau ouvert à vide
+   ne te réclame rien. Une fois par jour, jamais deux. */
 function verifDejeuner(t){
   if(PAUSE) return;
   if(TIMER.alertes.dej) return;
   const d = new Date();
   const heure = d.getHours() + d.getMinutes()/60;
   const parCompteur = (t >= DEJ_COMPTEUR);
-  const parHorloge  = (heure >= DEJ_HEURE && heure < DEJ_HEURE+3 && t > 0);
+  const parHorloge  = (heure >= DEJ_HEURE && t > 0);
   if(!parCompteur && !parHorloge) return;
   TIMER.alertes.dej = 1; saveTimer();
   ouvrirPause(parCompteur
