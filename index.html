@@ -183,6 +183,9 @@
   #persoBtn{ margin-left:6px; font-variant-numeric:tabular-nums; }
   #persoBtn.on{ background:#a3663a; border-color:#a3663a; color:#fff; }
   #persoBtn.a-fait{ border-color:#f0dcc9; background:#fbf2ea; color:#a3663a; }
+  /* Petit crayon : n'apparaît que si le chrono concerné a du temps à corriger. */
+  .editbtn{ margin-left:3px; padding:4px 7px; display:none; }
+  .editbtn.vu{ display:inline-block; }
   .persohint{ font-size:12px; font-weight:700; color:#a3663a; margin-top:7px; }
   .persohint:empty{ display:none; }
   .persohint span{ font-weight:600; color:#c0a58e; }
@@ -291,7 +294,7 @@
   <!-- ============ ONGLET AUJOURD'HUI ============ -->
   <section class="pane" id="pane-today">
     <div class="daycard" id="daycard">
-      <div class="dayline"><span class="dayico">⏱</span><span class="daytxt" id="dayTxt">0 min / 4h00</span><button class="pausebtn" id="adminBtn" title="Chrono pour le temps admin sans tâche : mails, tableau, rangement">⚙️ admin</button><button class="pausebtn" id="persoBtn" title="Chrono pour du perso sans tâche — compté hors des 4 h">🏠 perso</button><button class="pausebtn" id="pauseNow" title="Prendre ma pause maintenant">☕ pause</button></div>
+      <div class="dayline"><span class="dayico">⏱</span><span class="daytxt" id="dayTxt">0 min / 4h00</span><button class="pausebtn" id="adminBtn" title="Chrono pour le temps admin sans tâche : mails, tableau, rangement">⚙️ admin</button><button class="pausebtn editbtn" id="adminEdit" title="Corriger le temps admin — si tu as oublié d'arrêter le chrono">✏️</button><button class="pausebtn" id="persoBtn" title="Chrono pour du perso sans tâche — compté hors des 4 h">🏠 perso</button><button class="pausebtn editbtn" id="persoEdit" title="Corriger le temps perso — si tu as oublié d'arrêter le chrono">✏️</button><button class="pausebtn" id="pauseNow" title="Prendre ma pause maintenant">☕ pause</button></div>
       <div class="daytask" id="dayTask"></div>
       <div class="daybar" id="dayBar"><i id="dayFill"></i></div>
       <div class="dayhint" id="dayHint"></div>
@@ -425,7 +428,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-10-39';
+const VERSION='2026-09-28-40';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -1334,6 +1337,23 @@ function corrigerTotal(){
   TIMER.bonus = (TIMER.bonus||0) + (n*60 - totalJour());
   saveTimer(); render(); majBandeau(); toast('Total corrigé : '+hms(n*60));
 }
+/* Corriger un chrono libre (admin ou perso) quand tu as oublié de l'arrêter
+   pendant une pause ou un repas. On écrase le temps mesuré par le tien, et on
+   remet l'événement d'agenda à la bonne durée dans la foulée. */
+function corrigerLibre(id){
+  const cfg = LIBRES[id]; if(!cfg) return;
+  const actuel = Math.round(ecoule(id)/60);
+  const rep = prompt(cfg.titre+' — temps réellement passé aujourd\'hui,\nen minutes :\n\n(le chrono compte '+hms(ecoule(id))+')', String(actuel));
+  if(rep===null) return;
+  const n = parseInt(String(rep).replace(',','.').trim(),10);
+  if(isNaN(n)||n<0||n>900){ toast('Donne un nombre de minutes (0 à 900)'); return; }
+  TIMER.passe[id] = n*60;
+  if(TIMER.enCours===id) TIMER.depuis = Date.now();   // il repart de maintenant
+  saveTimer();
+  try{ syncLibre(id); }catch(e){}                      // l'agenda suit
+  render(); majBandeau();
+  toast(cfg.titre+' corrigé : '+hms(n*60));
+}
 /* Remise à zéro — avec sauvegarde, donc annulable. */
 function remettreZero(){
   if(!confirm('Effacer TOUT le temps de travail compté aujourd\'hui ?\n\nLe compteur repart de 0. Tu pourras annuler juste après.')) return;
@@ -1567,6 +1587,8 @@ try{ if('Notification' in window && Notification.permission==='default') Notific
 majNotifLigne();
 $('adminBtn').addEventListener('click',function(){ chrono(ADMIN); });
 $('persoBtn').addEventListener('click',function(){ chrono(PERSOCHR); });
+$('adminEdit').addEventListener('click',function(){ corrigerLibre(ADMIN); });
+$('persoEdit').addEventListener('click',function(){ corrigerLibre(PERSOCHR); });
 
 /* ---- démarrer / mettre en pause ---- */
 function chrono(id){
@@ -1597,6 +1619,8 @@ function majBoutonLibre(btnId, id, label, aide){
   b.classList.toggle('on', actif);
   b.classList.toggle('a-fait', !actif && e>0);
   b.title = actif ? 'Chrono en cours — clique pour arrêter' : aide;
+  const c=$(btnId.replace('Btn','Edit'));
+  if(c) c.classList.toggle('vu', e>0);
 }
 /* ---- rafraîchissement chaque seconde ---- */
 function majBandeau(){
