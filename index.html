@@ -428,7 +428,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-09-28-40';
+const VERSION='2026-10-05-41';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -940,7 +940,7 @@ function renderBrain(){
 }
 $('bdList').addEventListener('click',e=>{
   const del=e.target.getAttribute&&e.target.getAttribute('data-del'); const cp=e.target.getAttribute&&e.target.getAttribute('data-copy');
-  if(del){ brain=brain.filter(b=>b.id!==del); saveJSON('td_brain',brain); renderBrain(); }
+  if(del){ brain=brain.filter(b=>b.id!==del); saveJSON('td_brain',brain); renderBrain(); etatPlanifierPush(); }
   else if(cp){ copyText(brain.filter(b=>b.tag===cp).map(b=>'• '+b.text).join('\n')); }
 });
 function copyText(t){ const ok=()=>toast('Copié ! Colle-le dans ta Sheet 📋');
@@ -977,6 +977,7 @@ async function autoRollover(){
   }
   for(const ev of toMove){ try{ await moveToToday(ev); }catch(e){} }
   localStorage.setItem('td_lastroll',todayStr);
+  etatEcrire();                      /* le repère part sur la Sheet sans attendre */
   if(toMove.length) toast(toMove.length+' tâche(s) non faite(s) reportée(s) à aujourd\'hui');
 }
 $('bday').addEventListener('click',function(e){ const el=e.target.closest('[data-bd]'); if(!el)return; e.preventDefault(); const id=el.getAttribute('data-bd'); const ev=EVENTS.find(function(x){return x.id===id;}); if(ev) toggleBday(ev); });
@@ -1259,7 +1260,96 @@ TIMER.auto = TIMER.auto || {};
 TIMER.ancre = TIMER.ancre || 0;
 TIMER.pauses = TIMER.pauses || [];
 TIMER.avant = TIMER.avant || {}; TIMER.bonus = TIMER.bonus || 0;
-function saveTimer(){ saveJSON('td_timer', TIMER); }
+function saveTimer(){ saveJSON('td_timer', TIMER); etatPlanifierPush(); }
+
+/* ================= ÉTAT PARTAGÉ ENTRE APPAREILS =================
+   Le compteur, le vide-tête et le repère de report automatique vivaient
+   uniquement dans la mémoire du navigateur : le Mac et le téléphone avaient
+   donc deux journées séparées, et le téléphone relançait le report des tâches
+   une deuxième fois. On les recopie maintenant dans un onglet ETAT de la Sheet
+   to-do, qui sert d'unique source partagée.
+
+   Règle de conflit, voulue : au démarrage, l'appareil qui a LE PLUS de temps
+   compté gagne. Une ouverture rapide sur le téléphone ne peut donc jamais
+   effacer une journée de travail faite sur le Mac. Le vide-tête, lui, est
+   fusionné note par note — rien ne se perd.
+   (var et non let : ces variables sont lues par saveTimer, qui peut tourner
+   avant cette ligne.) */
+var ETAT_PLAGE = 'ETAT!A1:B1';
+var etatPush = null, etatDernier = '', etatPret = false;
+
+function etatPlage(){ return '/values/'+encodeURIComponent(ETAT_PLAGE); }
+function etatLocal(){
+  return { jour: jourCourant(), timer: TIMER, brain: brain,
+           lastroll: localStorage.getItem('td_lastroll') || '' };
+}
+function totalBrut(t){      /* temps compté d'un paquet, sans dépendre d'EVENTS */
+  if(!t) return 0;
+  var s = (t.bonus||0);
+  for(var k in (t.passe||{})) s += t.passe[k];
+  return s;
+}
+function fusionBrain(a,b){
+  var vus={}, out=[];
+  (a||[]).concat(b||[]).forEach(function(x){
+    if(x && x.id && !vus[x.id]){ vus[x.id]=1; out.push(x); }
+  });
+  return out;
+}
+async function etatAssurerOnglet(){
+  try{ await sh('GET', etatPlage()); return true; }
+  catch(e){
+    try{ await sh('POST','/:batchUpdate',{requests:[{addSheet:{properties:{title:'ETAT'}}}]}); return true; }
+    catch(e2){ return false; }
+  }
+}
+async function etatLire(){
+  try{
+    const r = await sh('GET', etatPlage());
+    const v = (r.values && r.values[0]) || [];
+    if(v[0] !== jourCourant() || !v[1]) return null;
+    return JSON.parse(v[1]);
+  }catch(e){ return null; }
+}
+async function etatEcrire(){
+  if(!etatPret) return;
+  const paquet = etatLocal();
+  const txt = JSON.stringify(paquet);
+  if(txt === etatDernier) return;
+  try{
+    await sh('PUT', etatPlage()+'?valueInputOption=RAW',
+             {range:ETAT_PLAGE, majorDimension:'ROWS', values:[[paquet.jour, txt]]});
+    etatDernier = txt;
+  }catch(e){}
+}
+function etatPlanifierPush(){
+  if(!etatPret || etatPush) return;
+  etatPush = setTimeout(function(){ etatPush=null; etatEcrire(); }, 4000);
+}
+/* Appelé AVANT autoRollover : c'est ce qui empêche le téléphone de reporter
+   les tâches une seconde fois. */
+async function etatDemarrer(){
+  if(!await etatAssurerOnglet()) return;
+  const dist = await etatLire();
+  if(dist){
+    if(dist.timer && totalBrut(dist.timer) > totalBrut(TIMER)){
+      TIMER = dist.timer;
+      TIMER.passe=TIMER.passe||{}; TIMER.alertes=TIMER.alertes||{}; TIMER.auto=TIMER.auto||{};
+      TIMER.avant=TIMER.avant||{}; TIMER.pauses=TIMER.pauses||[]; TIMER.bonus=TIMER.bonus||0;
+      saveJSON('td_timer', TIMER);
+      toast('Journée récupérée depuis ton autre appareil');
+    }
+    const fus = fusionBrain(brain, dist.brain);
+    if(fus.length !== brain.length){ brain = fus; saveJSON('td_brain', brain); try{ renderBrain(); }catch(e){} }
+    if(dist.lastroll && !localStorage.getItem('td_lastroll')){
+      localStorage.setItem('td_lastroll', dist.lastroll);
+    }
+  }
+  etatPret = true; etatDernier = '';
+  etatEcrire();
+  setInterval(etatEcrire, 20000);
+  document.addEventListener('visibilitychange', function(){ if(document.hidden) etatEcrire(); });
+}
 
 /* Repères de pause sur la barre des 4 h : trait plein = pause déjà prise,
    trait pointillé = prochaine pause. Ils marquent l'endroit, sans rien consommer. */
@@ -1838,7 +1928,7 @@ let _tdStarted=false;
 function startApp(){
   document.getElementById('loginGate').classList.add('hidden');
   if(_tdStarted){ loadToday(); loadExtras(); return; } _tdStarted=true;
-  (async function(){ today=new Date(); todayStr=ymd(today); try{ await autoRollover(); }catch(e){} await loadToday(); loadExtras(); setInterval(function(){ loadToday(true); },90000); setInterval(loadExtras,300000); })();
+  (async function(){ today=new Date(); todayStr=ymd(today); try{ await etatDemarrer(); }catch(e){} try{ await autoRollover(); }catch(e){} await loadToday(); loadExtras(); setInterval(function(){ loadToday(true); },90000); setInterval(loadExtras,300000); })();
 }
 function initGoogle(){
   if(!(window.google&&google.accounts&&google.accounts.oauth2)){ setTimeout(initGoogle,300); return; }
