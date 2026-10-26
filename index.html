@@ -251,19 +251,29 @@
   .msub .mtitle{ font-size:13.5px; color:#33302a; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   /* ---- 📈 Perfs ---- */
   .perf-when{ font-size:11.5px; color:#b0a894; margin:2px 2px 10px; }
-  .pstats{ display:flex; gap:8px; flex-wrap:wrap; margin:2px 0 4px; }
-  .pstat{ flex:1 1 86px; background:#faf8f3; border:1px solid #f0ece3; border-radius:10px; padding:8px 10px; }
-  .pstat b{ display:block; font-size:16px; font-weight:800; color:#2f2a22; font-variant-numeric:tabular-nums; }
-  .pstat span{ font-size:10.5px; color:#a49c8c; }
+  .verdict{ border-radius:12px; padding:11px 13px; font-size:13.5px; line-height:1.5; margin:0 0 14px; border:1px solid; }
+  .verdict b{ font-weight:800; }
+  .k-up{ background:#eef3ec; border-color:#d3e3cc; color:#4a7039; }
+  .k-flat{ background:#faf8f3; border-color:#ece8e0; color:#6f6857; }
+  .k-down{ background:#fdf3ea; border-color:#f0dcb8; color:#8a5a15; }
+  .phead{ display:flex; align-items:baseline; gap:8px; padding:10px 0 6px; border-top:1px solid #f2efe8; margin-top:6px; }
+  .phead.clic{ cursor:pointer; }
+  .phead .pname{ font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:#6f6857; }
+  .phead .pfol{ font-size:11.5px; color:#b0a894; flex:1; }
+  .phead .pcar{ color:#c3bcaa; font-size:11px; }
+  .pstats{ display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 2px; }
+  .pstat{ flex:1 1 92px; background:#faf8f3; border:1px solid #f0ece3; border-radius:10px; padding:9px 10px; }
+  .pstat b{ display:block; font-size:17px; font-weight:800; color:#2f2a22; font-variant-numeric:tabular-nums; }
+  .pstat span{ display:block; font-size:10.5px; color:#a49c8c; line-height:1.3; margin:1px 0 4px; }
+  .pvar{ font-size:10.5px; font-weight:800; border-radius:8px; padding:1px 6px; }
+  .v-up{ background:#e6efe2; color:#4a7039; }
+  .v-flat{ background:#efece4; color:#8a8375; }
+  .v-down{ background:#f8e6dd; color:#a4442c; }
   .prow{ display:flex; gap:9px; align-items:baseline; padding:8px 0; border-bottom:1px solid #f4f1ea; text-decoration:none; color:inherit; }
   .prow:last-child{ border-bottom:none; }
   .prow .pdate{ font-size:11px; color:#b0a894; flex:0 0 40px; font-variant-numeric:tabular-nums; }
   .prow .ptitle{ flex:1; min-width:0; font-size:13.5px; color:#33302a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .prow .pv{ font-size:13px; font-weight:700; color:#4a4438; font-variant-numeric:tabular-nums; flex:0 0 auto; }
-  .pflag{ font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; border-radius:10px; padding:2px 7px; flex:0 0 auto; }
-  .f-plus{ background:#eef3ec; color:#5c8a4c; }
-  .f-moy{ background:#f1efe9; color:#8a8375; }
-  .f-moins{ background:#fbf1e4; color:#a5683a; }
   .sd-head{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#b0a894; margin:12px 2px 2px; }
   /* ---- 📋 To-do website ---- */
   .todo{ display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-bottom:1px solid #f2efe8; }
@@ -1936,50 +1946,89 @@ try{ $('verstamp').textContent='version '+VERSION; }catch(e){}
 /* ---------- 📈 PERFS ---------- */
 const PERFS_SHEET_ID='1mSsfsuHIICDS8UaozYN0b1FLxpyYPEUdE_RvsBNC0XA';
 const PERFS_TAB='PERFS (auto)';
-function pnum(n){ n=Number(n)||0; return n>=1000000?(n/1000000).toFixed(1).replace('.',',')+' M':n.toLocaleString('fr-FR'); }
-function pflagHtml(t){ const n=norm(t);
-  if(n==='au-dessus') return '<span class="pflag f-plus">au-dessus</span>';
-  if(n==='en dessous') return '<span class="pflag f-moins">en dessous</span>';
-  if(n) return '<span class="pflag f-moy">moyenne</span>';
-  return ''; }
+let PERFS_ROWS=null;
+function pnum(n){ n=Number(n)||0; return n>=1000000?(n/1000000).toFixed(1).replace('.',',')+' M':Math.round(n).toLocaleString('fr-FR'); }
+function pvar(a,b){ a=Number(a)||0; b=Number(b)||0; if(!b) return null; return Math.round((a-b)/b*100); }
+function pvarHtml(v){ if(v===null) return '<span class="pvar v-flat">—</span>';
+  const cl=v>=10?'v-up':(v<=-10?'v-down':'v-flat');
+  return '<span class="pvar '+cl+'">'+(v>0?'+':'')+v+' %</span>'; }
 function pdateFr(s){ const m=String(s).match(/^(\d{4})-(\d{2})-(\d{2})/); return m?(m[3]+'/'+m[2]):''; }
+
 async function loadPerfs(){
   try{
-    const r=await gfetch('GET','/'+PERFS_SHEET_ID+'/values/'+a1(PERFS_TAB,'A1:H300')+'?majorDimension=ROWS',null,SHEETS);
-    const rows=r.values||[];
-    if(rows.length<3){ $('perfs').innerHTML='<div class="empty">L\'onglet « PERFS (auto) » est encore vide.</div>'; return; }
-    const maj=(rows[0]&&rows[0][2])?rows[0][2]:'', fen=(rows[0]&&rows[0][4])?rows[0][4]:'';
-    const sec=function(s,res){ return rows.filter(function(x){ return x[0]===s && x[1]===res; }); };
-    let h='<div class="perf-when">Mis à jour le '+esc(maj)+(fen?' · '+esc(fen):'')+'</div>';
-    ['Instagram','Facebook'].forEach(function(res){
-      const resume=sec('RESUME',res), der=sec('DERNIERES',res), top=sec('TOP',res);
-      if(!resume.length && !der.length) return;
-      const val=function(k){ const l=resume.filter(function(x){ return String(x[2]).indexOf(k)===0; })[0]; return l?l[3]:0; };
-      h+='<div class="sd-head">'+esc(res)+'</div>';
-      h+='<div class="pstats">'
-        +'<div class="pstat"><b>'+pnum(val('abonnés'))+'</b><span>abonnés</span></div>'
-        +'<div class="pstat"><b>'+pnum(val('publications'))+'</b><span>publications</span></div>'
-        +'<div class="pstat"><b>'+pnum(val('vues'))+'</b><span>vues cumulées</span></div>'
-        +'<div class="pstat"><b>'+pnum(val('médiane'))+'</b><span>médiane</span></div>'
-        +'</div>';
-      const liste=function(titre,arr){
-        if(!arr.length) return '';
-        return '<div class="sd-head">'+titre+'</div>'+arr.map(function(x){
-          return '<a class="prow" target="_blank" rel="noopener" href="'+esc(x[6]||'#')+'">'
-            +'<span class="pdate">'+pdateFr(x[2])+'</span>'
-            +'<span class="ptitle">'+esc(x[3]||'')+'</span>'
-            +'<span class="pv">'+pnum(x[4])+'</span>'
-            +pflagHtml(x[7]||'')+'</a>';
-        }).join('');
-      };
-      h+=liste('Dernières publications',der);
-      h+=liste('Meilleures publications',top);
-    });
-    $('perfs').innerHTML=h;
+    const r=await gfetch('GET','/'+PERFS_SHEET_ID+'/values/'+a1(PERFS_TAB,'A1:H400')+'?majorDimension=ROWS',null,SHEETS);
+    PERFS_ROWS=r.values||[]; renderPerfs();
   }catch(e){
     $('perfs').innerHTML='<div class="empty">⚠️ Perfs : '+esc(e.message)+'</div>';
   }
 }
+
+function perfLigne(x){
+  return '<a class="prow" target="_blank" rel="noopener" href="'+esc(x[6]||'#')+'">'
+    +'<span class="pdate">'+pdateFr(x[2])+'</span>'
+    +'<span class="ptitle">'+esc(x[3]||'')+'</span>'
+    +'<span class="pv">'+pnum(x[4])+'</span></a>';
+}
+
+function renderPerfs(){
+  const rows=PERFS_ROWS||[];
+  if(rows.length<3){ $('perfs').innerHTML='<div class="empty">L\'onglet « PERFS (auto) » est encore vide.</div>'; return; }
+  const maj=rows[0][2]||'', fen=String(rows[0][4]||'30');
+  const res=function(r,c){ const l=rows.filter(function(x){return x[0]==='RESUME'&&x[1]===r&&x[2]===c;})[0];
+    return l?{v:Number(l[3])||0,p:Number(l[4])||0}:{v:0,p:0}; };
+  const publis=function(r){ return rows.filter(function(x){return x[0]==='PUBLI'&&x[1]===r;}); };
+
+  let h='<div class="perf-when">Mis à jour le '+esc(maj)+' · '+esc(fen)+' derniers jours, comparés aux '+esc(fen)+' précédents</div>';
+
+  const med=res('Instagram','mediane'), dv=pvar(med.v,med.p);
+  if(dv!==null){
+    let ton='k-flat', mot='stable';
+    if(dv<=-20){ ton='k-down'; mot='en baisse'; } else if(dv>=20){ ton='k-up'; mot='en hausse'; }
+    h+='<div class="verdict '+ton+'">Instagram '+mot+' — <b>'+pnum(med.v)+' vues</b> par publication en médiane, contre '+pnum(med.p)+' sur les '+esc(fen)+' jours d\'avant.</div>';
+  }
+
+  function bloc(reseau,replie){
+    const ab=res(reseau,'abonnes'), pu=res(reseau,'publications'),
+          vu=res(reseau,'vues'), me=res(reseau,'mediane');
+    const liste=publis(reseau).slice();
+    const tri=liste.slice().sort(function(a,b){ return (Number(b[4])||0)-(Number(a[4])||0); });
+    const id='pf-'+reseau;
+    let c='';
+    c+='<div class="pstats">'
+      +'<div class="pstat"><b>'+pnum(me.v)+'</b><span>médiane par publication</span>'+pvarHtml(pvar(me.v,me.p))+'</div>'
+      +'<div class="pstat"><b>'+pnum(vu.v)+'</b><span>vues cumulées</span>'+pvarHtml(pvar(vu.v,vu.p))+'</div>'
+      +'<div class="pstat"><b>'+pnum(pu.v)+'</b><span>publications</span>'+pvarHtml(pvar(pu.v,pu.p))+'</div>'
+      +'</div>';
+    if(tri.length){
+      c+='<div class="sd-head">Ce qui a le mieux marché</div>'+tri.slice(0,3).map(perfLigne).join('');
+      c+='<div class="sd-head">Ce qui a le moins marché</div>'+tri.slice(-3).reverse().map(perfLigne).join('');
+      if(tri.length>6){
+        c+='<button class="morebtn" data-perfall="'+esc(reseau)+'">Voir les '+tri.length+' publications</button>'
+          +'<div class="pall" id="all-'+esc(reseau)+'" hidden>'+liste.map(perfLigne).join('')+'</div>';
+      }
+    } else {
+      c+='<div class="empty">Aucune publication sur la période.</div>';
+    }
+    let t='<div class="phead'+(replie?' clic':'')+'"'+(replie?' data-perftoggle="'+esc(id)+'"':'')+'>'
+      +'<span class="pname">'+esc(reseau)+'</span>'
+      +'<span class="pfol">'+pnum(ab.v)+' abonnés</span>'
+      +(replie?'<span class="pcar">▸</span>':'')+'</div>';
+    return t+'<div class="pbody" id="'+id+'"'+(replie?' hidden':'')+'>'+c+'</div>';
+  }
+
+  h+=bloc('Instagram',false);
+  h+=bloc('Facebook',true);
+  $('perfs').innerHTML=h;
+}
+
+document.addEventListener('click',function(e){
+  const t=e.target.closest&&e.target.closest('[data-perftoggle]');
+  if(t){ const el=$(t.getAttribute('data-perftoggle')); if(el){ el.hidden=!el.hidden;
+    const c=t.querySelector('.pcar'); if(c) c.textContent=el.hidden?'▸':'▾'; } return; }
+  const b=e.target.closest&&e.target.closest('[data-perfall]');
+  if(b){ const el=$('all-'+b.getAttribute('data-perfall'));
+    if(el){ el.hidden=!el.hidden; b.textContent=el.hidden?('Voir les '+el.children.length+' publications'):'Masquer'; } }
+});
 
 function loadExtras(){ loadMails(); loadTodo(); loadPerfs(); }
 
