@@ -249,6 +249,21 @@
   .msub:last-child{ border-bottom:none; }
   .msub .mfrom{ font-size:11.5px; color:#a49c8c; flex:0 0 104px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .msub .mtitle{ font-size:13.5px; color:#33302a; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* ---- 📈 Perfs ---- */
+  .perf-when{ font-size:11.5px; color:#b0a894; margin:2px 2px 10px; }
+  .pstats{ display:flex; gap:8px; flex-wrap:wrap; margin:2px 0 4px; }
+  .pstat{ flex:1 1 86px; background:#faf8f3; border:1px solid #f0ece3; border-radius:10px; padding:8px 10px; }
+  .pstat b{ display:block; font-size:16px; font-weight:800; color:#2f2a22; font-variant-numeric:tabular-nums; }
+  .pstat span{ font-size:10.5px; color:#a49c8c; }
+  .prow{ display:flex; gap:9px; align-items:baseline; padding:8px 0; border-bottom:1px solid #f4f1ea; text-decoration:none; color:inherit; }
+  .prow:last-child{ border-bottom:none; }
+  .prow .pdate{ font-size:11px; color:#b0a894; flex:0 0 40px; font-variant-numeric:tabular-nums; }
+  .prow .ptitle{ flex:1; min-width:0; font-size:13.5px; color:#33302a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .prow .pv{ font-size:13px; font-weight:700; color:#4a4438; font-variant-numeric:tabular-nums; flex:0 0 auto; }
+  .pflag{ font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; border-radius:10px; padding:2px 7px; flex:0 0 auto; }
+  .f-plus{ background:#eef3ec; color:#5c8a4c; }
+  .f-moy{ background:#f1efe9; color:#8a8375; }
+  .f-moins{ background:#fbf1e4; color:#a5683a; }
   .sd-head{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#b0a894; margin:12px 2px 2px; }
   /* ---- 📋 To-do website ---- */
   .todo{ display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-bottom:1px solid #f2efe8; }
@@ -351,13 +366,9 @@
     <div class="card" id="todo" style="margin-top:14px"><div class="empty">Chargement de la Sheet…</div></div>
   </section>
 
-  <!-- ============ ONGLET PERFS (phase 2) ============ -->
+  <!-- ============ ONGLET PERFS ============ -->
   <section class="pane" id="pane-perf" hidden>
-    <div class="card" style="margin-top:14px"><div class="soon">
-      <span class="se">📈</span>
-      <div class="st">Perfs de contenu</div>
-      <div class="sd">Vues, engagement et progression par plateforme. À brancher sur Metricool — c'est la phase 2.</div>
-    </div></div>
+    <div class="card" id="perfs" style="margin-top:14px"><div class="empty">Chargement des perfs…</div></div>
   </section>
 
   <!-- ============ ONGLET ÉDITO (phase 2) ============ -->
@@ -1880,7 +1891,7 @@ const SUBLINE={
   today:"Toute ta journée, tous tes agendas, en une page.",
   mail:"Ce qui attend une réponse, dossier par dossier.",
   todo:"Ta Sheet « EN COURS », de la plus urgente à la moins.",
-  perf:"", edito:""
+  perf:"Instagram et Facebook, 60 derniers jours.", edito:""
 };
 let TAB=loadJSON('td_tab','today'); if(PANES.indexOf(TAB)<0) TAB='today';
 function setBadge(id,v){ const el=$(id); if(!el) return; el.textContent=(v==null||v===''||v===0)?'':String(v); }
@@ -1922,7 +1933,55 @@ showTab(TAB);
 try{ $('verstamp').textContent='version '+VERSION; }catch(e){}
 
 /* ---------- rafraîchissement ---------- */
-function loadExtras(){ loadMails(); loadTodo(); }
+/* ---------- 📈 PERFS ---------- */
+const PERFS_SHEET_ID='1mSsfsuHIICDS8UaozYN0b1FLxpyYPEUdE_RvsBNC0XA';
+const PERFS_TAB='PERFS (auto)';
+function pnum(n){ n=Number(n)||0; return n>=1000000?(n/1000000).toFixed(1).replace('.',',')+' M':n.toLocaleString('fr-FR'); }
+function pflagHtml(t){ const n=norm(t);
+  if(n==='au-dessus') return '<span class="pflag f-plus">au-dessus</span>';
+  if(n==='en dessous') return '<span class="pflag f-moins">en dessous</span>';
+  if(n) return '<span class="pflag f-moy">moyenne</span>';
+  return ''; }
+function pdateFr(s){ const m=String(s).match(/^(\d{4})-(\d{2})-(\d{2})/); return m?(m[3]+'/'+m[2]):''; }
+async function loadPerfs(){
+  try{
+    const r=await gfetch('GET','/'+PERFS_SHEET_ID+'/values/'+a1(PERFS_TAB,'A1:H300')+'?majorDimension=ROWS',null,SHEETS);
+    const rows=r.values||[];
+    if(rows.length<3){ $('perfs').innerHTML='<div class="empty">L\'onglet « PERFS (auto) » est encore vide.</div>'; return; }
+    const maj=(rows[0]&&rows[0][2])?rows[0][2]:'', fen=(rows[0]&&rows[0][4])?rows[0][4]:'';
+    const sec=function(s,res){ return rows.filter(function(x){ return x[0]===s && x[1]===res; }); };
+    let h='<div class="perf-when">Mis à jour le '+esc(maj)+(fen?' · '+esc(fen):'')+'</div>';
+    ['Instagram','Facebook'].forEach(function(res){
+      const resume=sec('RESUME',res), der=sec('DERNIERES',res), top=sec('TOP',res);
+      if(!resume.length && !der.length) return;
+      const val=function(k){ const l=resume.filter(function(x){ return String(x[2]).indexOf(k)===0; })[0]; return l?l[3]:0; };
+      h+='<div class="sd-head">'+esc(res)+'</div>';
+      h+='<div class="pstats">'
+        +'<div class="pstat"><b>'+pnum(val('abonnés'))+'</b><span>abonnés</span></div>'
+        +'<div class="pstat"><b>'+pnum(val('publications'))+'</b><span>publications</span></div>'
+        +'<div class="pstat"><b>'+pnum(val('vues'))+'</b><span>vues cumulées</span></div>'
+        +'<div class="pstat"><b>'+pnum(val('médiane'))+'</b><span>médiane</span></div>'
+        +'</div>';
+      const liste=function(titre,arr){
+        if(!arr.length) return '';
+        return '<div class="sd-head">'+titre+'</div>'+arr.map(function(x){
+          return '<a class="prow" target="_blank" rel="noopener" href="'+esc(x[6]||'#')+'">'
+            +'<span class="pdate">'+pdateFr(x[2])+'</span>'
+            +'<span class="ptitle">'+esc(x[3]||'')+'</span>'
+            +'<span class="pv">'+pnum(x[4])+'</span>'
+            +pflagHtml(x[7]||'')+'</a>';
+        }).join('');
+      };
+      h+=liste('Dernières publications',der);
+      h+=liste('Meilleures publications',top);
+    });
+    $('perfs').innerHTML=h;
+  }catch(e){
+    $('perfs').innerHTML='<div class="empty">⚠️ Perfs : '+esc(e.message)+'</div>';
+  }
+}
+
+function loadExtras(){ loadMails(); loadTodo(); loadPerfs(); }
 
 let _tdStarted=false;
 function startApp(){
