@@ -449,7 +449,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-10-05-41';
+const VERSION='2026-10-30-1';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -644,6 +644,8 @@ function extractLinks(ev,isMeeting){
   const links=[]; const seen=new Set();
   const add=(url,label)=>{ if(!url)return; url=url.trim().replace(/[).,]+$/,''); if(!/^https?:\/\//i.test(url))return; if(seen.has(url))return; seen.add(url); links.push({url,label:label||labelFor(url)}); };
   if(isMeeting && ev.conferenceUrl) add(ev.conferenceUrl,'Visio');
+  (ev.attachments||[]).forEach(function(a){ const t=String(a.title||'').trim(); add(a.fileUrl, (t && t.length<24 && !/^https?:/i.test(t))?t:null); });
+
   if(ev.location && /^https?:\/\//i.test(ev.location)) add(ev.location);
   if(ev.description){ const div=document.createElement('div'); div.innerHTML=ev.description;
     div.querySelectorAll('a[href]').forEach(a=>{const t=(a.textContent||'').trim(); add(a.getAttribute('href'), t&&t.length<20&&!/^https?:/i.test(t)?t:null);});
@@ -1901,7 +1903,7 @@ const SUBLINE={
   today:"Toute ta journée, tous tes agendas, en une page.",
   mail:"Ce qui attend une réponse, dossier par dossier.",
   todo:"Ta Sheet « EN COURS », de la plus urgente à la moins.",
-  perf:"Instagram et Facebook, 60 derniers jours.", edito:""
+  perf:"Instagram et Facebook, 30 derniers jours.", edito:""
 };
 let TAB=loadJSON('td_tab','today'); if(PANES.indexOf(TAB)<0) TAB='today';
 function setBadge(id,v){ const el=$(id); if(!el) return; el.textContent=(v==null||v===''||v===0)?'':String(v); }
