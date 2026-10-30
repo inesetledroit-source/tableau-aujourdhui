@@ -114,6 +114,8 @@
   .lnk{ display:inline-flex; align-items:center; gap:4px; text-decoration:none; font-size:12px; font-weight:600; color:#3b6ea5; background:#eef3f9; border:1px solid #dbe6f2; border-radius:8px; padding:3px 9px; }
   .lnk:hover{ background:#e2ecf7; }
   .lnk.addr{ color:#7a7360; background:#f3f1ea; border-color:#e6e1d7; }
+  .lnk.doc{ color:#4d7b40; background:#f2f7f0; border-color:#cfe0c6; }
+  .lnk.doc:hover{ background:#e7f0e3; }
   .context .ci{ display:flex; gap:10px; align-items:center; color:#8a8375; font-size:14px; padding:5px 0; }
   .dot{ width:8px;height:8px;border-radius:50%;background:#cbb994;flex:0 0 auto; }
   .empty{ color:#a49c8c; font-size:14px; padding:6px 2px; }
@@ -449,7 +451,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-10-30-1';
+const VERSION='2026-10-30-2';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -635,6 +637,9 @@ function labelFor(url){ try{const h=new URL(url).hostname.replace('www.','');
   if(h.includes('meet.google'))return 'Visio'; if(h.includes('canva'))return 'Canva'; if(h.includes('instagram'))return 'Insta';
   if(h.includes('linkedin'))return 'LinkedIn'; if(h.includes('youtu'))return 'YouTube'; if(h.includes('notion'))return 'Notion';
   return h.split('.')[0]; }catch(e){return 'Lien';} }
+function kindFor(url){ try{const h=new URL(url).hostname.replace('www.','');
+  if(h.includes('docs.google')||h.includes('sheets.google')||h.includes('drive.google')||h.includes('notion')||/\.pdf(\b|$)/i.test(url)) return ' doc';
+  return ''; }catch(e){return '';} }
 function iconFor(url){ try{const h=new URL(url).hostname.replace('www.','');
   if(h.includes('docs.google'))return '📄'; if(h.includes('sheets.google'))return '📊'; if(h.includes('drive.google'))return '📁';
   if(h.includes('meet.google'))return '📹'; if(h.includes('canva'))return '🎨'; if(h.includes('instagram'))return '📸';
@@ -659,7 +664,7 @@ function linksHTML(ev,isMeeting){
   if(!links.length && !addr) return '';
   let out='<div class="links">';
   if(addr){ out+=`<a class="lnk addr" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}">📍 ${esc(addr.length>34?addr.slice(0,34)+'…':addr)}</a>`; }
-  out+=links.map(l=>`<a class="lnk" target="_blank" rel="noopener" href="${esc(l.url)}">${iconFor(l.url)} ${esc(l.label)}</a>`).join('');
+  out+=links.map(l=>`<a class="lnk${kindFor(l.url)}" target="_blank" rel="noopener" href="${esc(l.url)}">${iconFor(l.url)} ${esc(l.label)}</a>`).join('');
   return out+'</div>';
 }
 
