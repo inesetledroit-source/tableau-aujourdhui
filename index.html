@@ -451,7 +451,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-10-30-2';
+const VERSION='2026-11-03-3';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -1282,13 +1282,47 @@ const DEJ_COMPTEUR= 2*3600;
 const DEJ_HEURE   = 13.5;
 
 function jourCourant(){ return ymd(new Date()); }
+/* ================= ARCHIVE DES JOURNÉES =================
+   TIMER ne contient que la journée en cours. En revenant sur un jour passé, le
+   tableau affichait donc le compteur du jour — c'est-à-dire 0 le lendemain
+   matin, alors que les tâches de la veille étaient bien cochées. On garde
+   maintenant, jour par jour, le total pro et le total perso.
+   Mis à jour en continu plutôt qu'à minuit : comme ça, peu importe l'heure à
+   laquelle le tableau est ouvert ou fermé, la journée est déjà enregistrée.
+   (var et non let : archiver() peut être appelé avant cette ligne.) */
+var HISTO = loadJSON('td_histo', {});
+function histoJour(j){ return (HISTO && HISTO[j]) ? HISTO[j] : null; }
+function archiver(){
+  try{
+    if(!HISTO) HISTO = {};
+    if(!TIMER || !TIMER.jour) return;
+    if(VIEW_OFFSET !== 0) return;          /* on n'archive que la vraie journée */
+    const tt = totauxJour();
+    HISTO[TIMER.jour] = {pro:tt.pro, perso:tt.perso};
+    const cles = Object.keys(HISTO).sort();
+    while(cles.length > 180) delete HISTO[cles.shift()];   /* ~6 mois gardés */
+    saveJSON('td_histo', HISTO);
+  }catch(e){}
+}
+function fusionHisto(a,b){
+  const out = {};
+  [a||{}, b||{}].forEach(function(src){
+    for(const j in src){
+      const v = src[j] || {};
+      const d = out[j] || {pro:0, perso:0};
+      out[j] = {pro:Math.max(d.pro, v.pro||0), perso:Math.max(d.perso, v.perso||0)};
+    }
+  });
+  return out;
+}
+
 let TIMER = loadJSON('td_timer', null);
 if(!TIMER || TIMER.jour !== jourCourant()) TIMER = {jour:jourCourant(), enCours:null, depuis:0, passe:{}, alertes:{}, auto:{}, avant:{}, ancre:0, pauses:[], bonus:0};
 TIMER.auto = TIMER.auto || {};
 TIMER.ancre = TIMER.ancre || 0;
 TIMER.pauses = TIMER.pauses || [];
 TIMER.avant = TIMER.avant || {}; TIMER.bonus = TIMER.bonus || 0;
-function saveTimer(){ saveJSON('td_timer', TIMER); etatPlanifierPush(); }
+function saveTimer(){ saveJSON('td_timer', TIMER); archiver(); etatPlanifierPush(); }
 
 /* ================= ÉTAT PARTAGÉ ENTRE APPAREILS =================
    Le compteur, le vide-tête et le repère de report automatique vivaient
@@ -1308,7 +1342,7 @@ var etatPush = null, etatDernier = '', etatPret = false;
 
 function etatPlage(){ return '/values/'+encodeURIComponent(ETAT_PLAGE); }
 function etatLocal(){
-  return { jour: jourCourant(), timer: TIMER, brain: brain,
+  return { jour: jourCourant(), timer: TIMER, brain: brain, histo: HISTO,
            lastroll: localStorage.getItem('td_lastroll') || '' };
 }
 function totalBrut(t){      /* temps compté d'un paquet, sans dépendre d'EVENTS */
@@ -1367,6 +1401,7 @@ async function etatDemarrer(){
       saveJSON('td_timer', TIMER);
       toast('Journée récupérée depuis ton autre appareil');
     }
+    if(dist.histo){ HISTO = fusionHisto(HISTO, dist.histo); saveJSON('td_histo', HISTO); }
     const fus = fusionBrain(brain, dist.brain);
     if(fus.length !== brain.length){ brain = fus; saveJSON('td_brain', brain); try{ renderBrain(); }catch(e){} }
     if(dist.lastroll && !localStorage.getItem('td_lastroll')){
@@ -1447,6 +1482,7 @@ function totalJour(){ return totauxJour().pro; }
 function totalPerso(){ return totauxJour().perso; }
 /* Corriger le total de la journée en une fois (clic sur le gros chiffre). */
 function corrigerTotal(){
+  if(VIEW_OFFSET !== 0){ toast('Tu regardes un autre jour — le compteur ne se corrige que sur aujourd\'hui.'); return; }
   const actuel = Math.round(totalJour()/60);
   const rep = prompt('Temps de travail total pour aujourd\'hui,\nen minutes :', String(actuel));
   if(rep===null) return;
@@ -1742,24 +1778,37 @@ function majBoutonLibre(btnId, id, label, aide){
 }
 /* ---- rafraîchissement chaque seconde ---- */
 function majBandeau(){
-  const t=totalJour();
-  $('dayTxt').textContent = hms(t)+' / 4h00';
+  /* Deux régimes : aujourd'hui, on lit le compteur vivant ; un autre jour, on
+     lit l'archive de ce jour-là. */
+  const passe = (VIEW_OFFSET !== 0);
+  const arch  = passe ? histoJour(VIEW_STR) : null;
+  const t = passe ? (arch ? arch.pro : 0) : totalJour();
+  $('dayTxt').textContent = (passe && !arch) ? 'compteur non enregistré' : hms(t)+' / 4h00';
+  $('dayTxt').title = passe ? 'Total de ce jour-là. La correction ne marche que sur aujourd\'hui.'
+                            : 'Clique pour corriger le total du jour';
   $('dayFill').style.width = Math.min(100,100*t/CAP)+'%';
-  majMarques();
+  if(passe){
+    /* Les repères de pause appartiennent au jour en cours : on les retire,
+       et on vide la signature pour qu'ils soient redessinés au retour. */
+    const bb=$('dayBar');
+    if(bb) bb.querySelectorAll('.pmark').forEach(function(m){ m.remove(); });
+    SIG_MARQUES='';
+  } else majMarques();
   const c=$('daycard');
   c.classList.toggle('warn', t>=CAP_WARN && t<CAP);
   c.classList.toggle('over', t>=CAP);
-  const ev = TIMER.enCours ? EVENTS.filter(x=>x.id===TIMER.enCours)[0] : null;
-  $('dayTask').textContent = LIBRES[TIMER.enCours] ? ('▶ '+LIBRES[TIMER.enCours].titre.replace(/^\S+\s/,''))
-                           : (ev ? ('▶ '+displayTitle(ev)) : '');
+  const ev = (!passe && TIMER.enCours) ? EVENTS.filter(x=>x.id===TIMER.enCours)[0] : null;
+  $('dayTask').textContent = passe ? ''
+                           : (LIBRES[TIMER.enCours] ? ('▶ '+LIBRES[TIMER.enCours].titre.replace(/^\S+\s/,''))
+                           : (ev ? ('▶ '+displayTitle(ev)) : ''));
   majBoutonLibre('adminBtn', ADMIN, '⚙️ admin', 'Chrono pour le temps admin sans tâche : mails, tableau, rangement');
   majBoutonLibre('persoBtn', PERSOCHR, '🏠 perso', 'Chrono pour du perso sans tâche — compté hors des 4 h');
-  $('dayHint').textContent = t>=CAP_MAX ? '4h30. C\'est ta limite absolue. Tu fermes.'
+  $('dayHint').textContent = passe ? '' : t>=CAP_MAX ? '4h30. C\'est ta limite absolue. Tu fermes.'
     : (t>=CAP ? 'Tes 4 h sont faites. Tu ne continues que si la journée l\'exige — 4h30 grand maximum.'
     : (t>=CAP_WARN ? 'Plus que '+hms(CAP-t)+' avant tes 4 h.' : ''));
   const ph2=$('persoHint');
   if(ph2){
-    const pp=totalPerso();
+    const pp = passe ? (arch ? arch.perso : 0) : totalPerso();
     ph2.innerHTML = pp>0 ? '+ '+hms(pp)+' <span>en perso, hors des 4 h</span>' : '';
   }
   try{ renderCharge(EVENTS.filter(x=>classify(x)==='task' && !estPerso(x))); }catch(e){}
@@ -1767,7 +1816,7 @@ function majBandeau(){
   if(ph){
     const reste=BLOC-sansPause();
     const actif=!!TIMER.enCours && !PAUSE;
-    ph.textContent = PAUSE ? ''
+    ph.textContent = passe ? '' : PAUSE ? ''
       : (reste<=0 ? '☕ Pause à prendre — tu as passé 45 min sans couper.'
       : (sansPause()<60 ? '☕ Prochaine pause après 45 min de travail.'
       : '☕ Pause dans '+hms(reste)+' de travail.'));
@@ -1836,7 +1885,9 @@ function verifAlarmes(){
     }
   }
 }
+var ticN = 0;
 function tic(){
+  if(++ticN % 60 === 0) archiver();
   if(TIMER.jour!==jourCourant()){ TIMER={jour:jourCourant(),enCours:null,depuis:0,passe:{},alertes:{},auto:{},avant:{},ancre:0,pauses:[],bonus:0}; saveTimer(); }
   if(PAUSE) majPause();
   else if(TIMER.enCours && sansPause()>=BLOC) ouvrirPause('45 minutes d\'affilée. On coupe ici, même au milieu.');
