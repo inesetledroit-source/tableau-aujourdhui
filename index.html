@@ -451,7 +451,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-11-03-3';
+const VERSION='2026-11-03-4';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -1304,13 +1304,71 @@ function archiver(){
     saveJSON('td_histo', HISTO);
   }catch(e){}
 }
+/* ================= ESTIMATION DES JOURNÉES D'AVANT =================
+   Avant la version qui archive, le temps réel n'était stocké nulle part : ces
+   journées sont définitivement perdues comme mesure. On les reconstitue en
+   ESTIMATION — la somme des durées prévues des tâches cochées ✅ de chaque
+   jour. C'est du prévu, pas du mesuré : ces jours s'affichent avec un ≈.
+   Fait une seule fois, et une vraie mesure a toujours la priorité. */
+const EST_JOURS = 60;
+async function estimerPasse(){
+  if(localStorage.getItem('td_estim') === 'v1') return;
+  const fin = new Date(); fin.setHours(0,0,0,0);
+  const deb = new Date(fin.getTime() - EST_JOURS*86400000);
+  /* On ignore santé, anniversaires et jours fériés : ce ne sont pas des tâches. */
+  const cals = CALS.filter(function(c){ return !c.holiday && !c.anniv && !c.sante; });
+  const parJour = {};
+  for(const c of cals){
+    let tok = null, garde = 0;
+    do{
+      let r = null;
+      try{
+        r = await gfetch('GET','/calendars/'+encodeURIComponent(c.id)+'/events'
+          + '?timeMin=' + encodeURIComponent(toOffsetISO(ymd(deb)+'T00:00:00'))
+          + '&timeMax=' + encodeURIComponent(toOffsetISO(ymd(fin)+'T00:00:00'))
+          + '&singleEvents=true&orderBy=startTime&maxResults=2500'
+          + (tok ? '&pageToken='+encodeURIComponent(tok) : ''));
+      }catch(e){ break; }
+      (r.items||[]).forEach(function(it){
+        if(it.status==='cancelled') return;
+        const ev = Object.assign({}, mapEvent(it), {_cal:c.id});
+        if(!isDone(ev)) return;                 /* seules les tâches cochées */
+        if(classify(ev)!=='task') return;       /* ni rdv, ni contexte */
+        const j = ((ev.start && (ev.start.dateTime||ev.start.date)) || '').slice(0,10);
+        if(!j) return;
+        const d = parJour[j] || (parJour[j] = {pro:0, perso:0});
+        if(estPerso(ev)) d.perso += alloue(ev); else d.pro += alloue(ev);
+      });
+      tok = (r && r.nextPageToken) || null;
+    } while(tok && ++garde < 12);
+  }
+  if(!HISTO) HISTO = {};
+  let n = 0;
+  for(const j in parJour){
+    if(j >= jourCourant()) continue;            /* aujourd'hui se mesure */
+    if(HISTO[j]) continue;                      /* une vraie mesure gagne */
+    const d = parJour[j];
+    if(d.pro <= 0 && d.perso <= 0) continue;
+    HISTO[j] = {pro:d.pro, perso:d.perso, est:true};
+    n++;
+  }
+  localStorage.setItem('td_estim','v1');
+  if(n){
+    saveJSON('td_histo', HISTO);
+    etatPlanifierPush();
+    toast(n+' journée'+(n>1?'s':'')+' estimée'+(n>1?'s':'')+' d\'après tes tâches cochées');
+    try{ majBandeau(); }catch(e){}
+  }
+}
 function fusionHisto(a,b){
   const out = {};
   [a||{}, b||{}].forEach(function(src){
     for(const j in src){
       const v = src[j] || {};
       const d = out[j] || {pro:0, perso:0};
+      const pris = (v.pro||0) > d.pro ? v : d;
       out[j] = {pro:Math.max(d.pro, v.pro||0), perso:Math.max(d.perso, v.perso||0)};
+      if(pris.est) out[j].est = true;
     }
   });
   return out;
@@ -1783,9 +1841,12 @@ function majBandeau(){
   const passe = (VIEW_OFFSET !== 0);
   const arch  = passe ? histoJour(VIEW_STR) : null;
   const t = passe ? (arch ? arch.pro : 0) : totalJour();
-  $('dayTxt').textContent = (passe && !arch) ? 'compteur non enregistré' : hms(t)+' / 4h00';
-  $('dayTxt').title = passe ? 'Total de ce jour-là. La correction ne marche que sur aujourd\'hui.'
-                            : 'Clique pour corriger le total du jour';
+  const estime = !!(arch && arch.est);
+  $('dayTxt').textContent = (passe && !arch) ? 'compteur non enregistré'
+                          : (estime ? '≈ ' : '') + hms(t)+' / 4h00';
+  $('dayTxt').title = !passe ? 'Clique pour corriger le total du jour'
+    : (estime ? 'Estimation : somme des durées prévues des tâches cochées ce jour-là, pas du temps mesuré.'
+              : 'Total mesuré ce jour-là. La correction ne marche que sur aujourd\'hui.');
   $('dayFill').style.width = Math.min(100,100*t/CAP)+'%';
   if(passe){
     /* Les repères de pause appartiennent au jour en cours : on les retire,
@@ -2094,7 +2155,7 @@ let _tdStarted=false;
 function startApp(){
   document.getElementById('loginGate').classList.add('hidden');
   if(_tdStarted){ loadToday(); loadExtras(); return; } _tdStarted=true;
-  (async function(){ today=new Date(); todayStr=ymd(today); try{ await etatDemarrer(); }catch(e){} try{ await autoRollover(); }catch(e){} await loadToday(); loadExtras(); setInterval(function(){ loadToday(true); },90000); setInterval(loadExtras,300000); })();
+  (async function(){ today=new Date(); todayStr=ymd(today); try{ await etatDemarrer(); }catch(e){} try{ await autoRollover(); }catch(e){} await loadToday(); try{ estimerPasse(); }catch(e){} loadExtras(); setInterval(function(){ loadToday(true); },90000); setInterval(loadExtras,300000); })();
 }
 function initGoogle(){
   if(!(window.google&&google.accounts&&google.accounts.oauth2)){ setTimeout(initGoogle,300); return; }
