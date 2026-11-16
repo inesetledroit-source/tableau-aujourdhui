@@ -294,6 +294,11 @@
   .dtin{ width:100%; border:1px solid #e2ddd2; border-radius:10px; padding:11px 12px; font-size:15px; background:#fdfcfa; font-family:inherit; }
   .durbtn{ border:1px solid #e2ddd2; background:#fff; border-radius:20px; padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer; color:#6f6857; }
   .durbtn.on{ background:#2f2a22; color:#fff; border-color:#2f2a22; }
+  /* Bouton d'ajout de tâche, collé à droite du titre de section. */
+  #ntOpen{ margin-left:auto; }
+  #ntTitre{ width:100%; border:1px solid #e2ddd2; border-radius:10px; padding:11px 12px; font-size:15px; background:#fdfcfa; font-family:inherit; margin-bottom:12px; }
+  #ntOverlay .calbtn{ border:1px solid #e2ddd2; background:#fff; border-radius:20px; padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer; color:#6f6857; font-family:inherit; }
+  #ntOverlay .calbtn.on{ background:#2f2a22; color:#fff; border-color:#2f2a22; }
 </style>
 </head>
 <body>
@@ -345,7 +350,7 @@
       <div class="section-title sante-head" id="meetHead" role="button" tabindex="0"><span class="sante-caret">▶</span>📅 Rendez-vous & meetings <span class="count" id="c-meet">0</span></div>
       <div class="card" id="meetings"></div>
 
-      <div class="section-title sante-head" id="taskHead" role="button" tabindex="0"><span class="sante-caret">▶</span>✅ Tâches du jour <span class="count" id="c-task">0</span></div>
+      <div class="section-title sante-head" id="taskHead" role="button" tabindex="0"><span class="sante-caret">▶</span>✅ Tâches du jour <span class="count" id="c-task">0</span><button class="pausebtn" id="ntOpen" title="Ajouter une tâche — elle part dans ton agenda">+ tâche</button></div>
       <div id="taskWrap">
         <div class="progress" id="progress"></div>
         <div class="bar"><i id="barfill"></i></div>
@@ -430,6 +435,22 @@
   <div class="bd-hint">La tâche est créée dans ton agenda principal, puis la ligne passe de « en cours » à « déjà dans agenda ».</div>
   <div class="mactions"><button class="btn btn-ghost" id="agCancel">Annuler</button><button class="btn btn-go" id="agGo">Créer</button></div>
 </div></div>
+<div class="overlay" id="ntOverlay"><div class="modal">
+  <h3>➕ Nouvelle tâche</h3>
+  <input type="text" id="ntTitre" placeholder="Ce que tu as à faire">
+  <div class="tags" style="margin-bottom:12px"><span class="bd-hint" style="margin:0 4px 0 0;">Agenda :</span>
+    <button class="calbtn on" data-cal="pro">💼 pro</button>
+    <button class="calbtn" data-cal="perso">🏠 perso</button>
+  </div>
+  <input type="datetime-local" id="ntWhen" class="dtin">
+  <div class="tags" style="margin-top:12px"><span class="bd-hint" style="margin:0 4px 0 0;">Durée :</span>
+    <button class="durbtn on" data-ndur="30">30 min</button>
+    <button class="durbtn" data-ndur="60">1 h</button>
+    <button class="durbtn" data-ndur="120">2 h</button>
+  </div>
+  <div class="bd-hint" id="ntHint"></div>
+  <div class="mactions"><button class="btn btn-ghost" id="ntCancel">Annuler</button><button class="btn btn-go" id="ntGo">Créer</button></div>
+</div></div>
 <div class="overlay" id="pauseOverlay"><div class="pausebox">
   <span class="pe" id="pauseEmoji">☕</span>
   <h3 id="pauseTitle">Pause</h3>
@@ -451,7 +472,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-11-03-4';
+const VERSION='2026-11-16-5';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -816,6 +837,7 @@ function nextDT(iso){ return plusDT(iso,1); }
 function nextD(dstr){ return plusD(dstr,1); }
 /* Perso : on reporte à demain, week-end compris. Pro : au prochain jour ouvré. */
 const CAL_PERSO='90d16798804ca3f881b93ceb429a271961560b5588a8dce62271ca03c7552425@group.calendar.google.com';
+const CAL_PRO='e91d2e5c905e6d2313e80b2fa16d4e89aef452a3f13b006a86ab57843b3bc5fb@group.calendar.google.com';
 function estPerso(ev){ return (ev._cal||'')===CAL_PERSO; }
 function dateReport(ev){
   const d=new Date(startMs(ev)); d.setHours(0,0,0,0); d.setDate(d.getDate()+1);
@@ -1259,6 +1281,91 @@ async function doAgenda(){
   $('agGo').disabled=false;
 }
 $('agGo').addEventListener('click',doAgenda);
+
+/* ---------- ➕ ajouter une tâche depuis le tableau ----------
+   L'autre sens marchait déjà : le tableau lit les agendas en direct. Ici on
+   crée l'événement directement dans Google Agenda, donc la tâche existe des
+   deux côtés dès la validation.
+   Le créneau proposé est le premier trou libre : on considère comme occupé
+   tout ce qui a une heure — rendez-vous, tâches ET santé — pour ne pas te
+   poser une tâche par-dessus ton yoga. Recalculé quand tu changes la durée. */
+let NT_DUR = 30, NT_CAL = 'pro';
+function ntMarquer(){
+  document.querySelectorAll('#ntOverlay .durbtn').forEach(function(b){ b.classList.toggle('on', +b.getAttribute('data-ndur')===NT_DUR); });
+  document.querySelectorAll('#ntOverlay .calbtn').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-cal')===NT_CAL); });
+}
+function occupes(){
+  const out = [];
+  (EVENTS||[]).forEach(function(e){
+    const c = classify(e);
+    if(c==='context' || c==='birthday') return;
+    if(!(e.start && e.start.dateTime)) return;
+    const a = Date.parse(e.start.dateTime);
+    const b = (e.end && e.end.dateTime) ? Date.parse(e.end.dateTime) : a + DUREE_DEFAUT*1000;
+    if(a && b>a) out.push([a,b]);
+  });
+  return out.sort(function(x,y){ return x[0]-y[0]; });
+}
+function creneauLibre(minutes){
+  const pris = occupes();
+  const pas = 15*60000, duree = minutes*60000;
+  const d = new Date();
+  /* on part de maintenant, arrondi au quart d'heure suivant */
+  let t = Math.ceil(d.getTime()/pas)*pas;
+  const finJour = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 20, 0, 0, 0).getTime();
+  for(; t + duree <= finJour; t += pas){
+    const libre = pris.every(function(p){ return t + duree <= p[0] || t >= p[1]; });
+    if(libre) return new Date(t);
+  }
+  /* journée pleine : demain à 11h30 */
+  const dem = new Date(d.getFullYear(), d.getMonth(), d.getDate()+1, 11, 30, 0, 0);
+  return dem;
+}
+function ntProposer(){
+  const s = creneauLibre(NT_DUR);
+  $('ntWhen').value = ymd(s)+'T'+pad(s.getHours())+':'+pad(s.getMinutes());
+  const auj = ymd(s)===ymd(new Date());
+  $('ntHint').textContent = auj ? 'Premier créneau libre trouvé aujourd\'hui. Tu peux le changer.'
+                                : 'Ta journée est pleine — proposé demain 11h30. Tu peux le changer.';
+}
+function ouvrirNT(){
+  $('ntTitre').value = '';
+  NT_DUR = 30; NT_CAL = 'pro'; ntMarquer(); ntProposer();
+  $('ntOverlay').classList.add('on');
+  setTimeout(function(){ try{ $('ntTitre').focus(); }catch(e){} }, 50);
+}
+$('ntOpen').addEventListener('click',function(e){ e.stopPropagation(); ouvrirNT(); });
+$('ntCancel').addEventListener('click',function(){ $('ntOverlay').classList.remove('on'); });
+$('ntOverlay').addEventListener('click',function(e){
+  if(e.target===$('ntOverlay')){ $('ntOverlay').classList.remove('on'); return; }
+  const dd = e.target.getAttribute && e.target.getAttribute('data-ndur');
+  if(dd){ NT_DUR = +dd; ntMarquer(); ntProposer(); return; }
+  const cc = e.target.getAttribute && e.target.getAttribute('data-cal');
+  if(cc){ NT_CAL = cc; ntMarquer(); }
+});
+$('ntTitre').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); creerTache(); } });
+async function creerTache(){
+  const titre = ($('ntTitre').value||'').trim();
+  if(!titre){ toast('Donne un titre à ta tâche'); try{ $('ntTitre').focus(); }catch(e){} return; }
+  const v = $('ntWhen').value;
+  if(!v){ toast('Choisis une date et une heure'); return; }
+  const cal = (NT_CAL==='perso') ? CAL_PERSO : CAL_PRO;
+  $('ntGo').disabled = true;
+  try{
+    const s = new Date(v), e2 = new Date(s.getTime()+NT_DUR*60000);
+    await gfetch('POST','/calendars/'+encodeURIComponent(cal)+'/events',{
+      summary: titre,
+      description: 'Créée depuis le tableau Aujourd\'hui.',
+      start:{dateTime:offISO(s),timeZone:'Europe/Paris'},
+      end:{dateTime:offISO(e2),timeZone:'Europe/Paris'}
+    });
+    $('ntOverlay').classList.remove('on');
+    toast('✅ « '+titre+' » dans ton agenda '+(NT_CAL==='perso'?'perso':'pro'));
+    try{ await loadToday(true); }catch(e){}
+  }catch(err){ toast('⚠️ '+err.message); }
+  $('ntGo').disabled = false;
+}
+$('ntGo').addEventListener('click',creerTache);
 
 
 /* ================= MINUTEUR DE JOURNÉE ================= */
