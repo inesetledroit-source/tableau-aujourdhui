@@ -342,6 +342,7 @@
   .ws-chip.who{ background:#f1eef9; color:#5f4fa0; }
   .ws-chip.urg{ background:#fdeceb; color:#b5443a; }
   .ws-chip.s-done{ background:#eef5ea; color:#4d7b40; } .ws-chip.s-wait{ background:#fbf1e4; color:#a5683a; } .ws-chip.s-doing{ background:#eef3f9; color:#3b6ea5; } .ws-chip.s-branch{ background:#f1eef9; color:#5f4fa0; }
+.ws-fold{ margin:6px 0 0; } .ws-fold>summary{ cursor:pointer; list-style:none; font-size:11.5px; font-weight:700; color:#8a8375; padding:6px 16px; } .ws-fold>summary::-webkit-details-marker{ display:none; } .ws-fold>summary::before{ content:'\25B8 '; } .ws-fold[open]>summary::before{ content:'\25BE '; } .ws-fold .ws-tt{ text-decoration:line-through; color:#a49c8c; }
   .ws-td{ display:none; padding:0 16px 12px 37px; }
   .ws-task.x .ws-td{ display:block; }
   .ws-det{ white-space:pre-wrap; background:#faf8f3; border-radius:10px; padding:9px 11px; font-size:13px; color:#4a4438; margin-bottom:8px; }
@@ -2362,6 +2363,7 @@ async function loadSite(){
   }
 }
 function wsPass(t){
+      if(wsFilt==='branch') return t.st==='branch';
   if(wsFilt==='done') return t.st==='done';
   if(wsFilt==='mine') return t.st!=='done'&&wsMine(t);
   if(wsFilt==='others') return t.st!=='done'&&!wsMine(t);
@@ -2401,17 +2403,17 @@ function renderSite(){
     +'<div class="ws-bar"><div class="ws-seg">'
     +['etape:Par étape','pers:Par personne'].map(x=>{const k=x.split(':');return '<button data-wsv="'+k[0]+'" class="'+(wsView===k[0]?'on':'')+'">'+k[1]+'</button>';}).join('')
     +'</div><div class="ws-seg">'
-    +['all:Tout','mine:Mes tâches','others:J’attends','done:Fait'].map(x=>{const k=x.split(':');return '<button data-wsf="'+k[0]+'" class="'+(wsFilt===k[0]?'on':'')+'">'+k[1]+'</button>';}).join('')
+    +['all:Tout','mine:Mes tâches','others:J’attends','branch:Branches','done:Fait'].map(x=>{const k=x.split(':');return '<button data-wsf="'+k[0]+'" class="'+(wsFilt===k[0]?'on':'')+'">'+k[1]+'</button>';}).join('')
     +'</div></div></div>';
   wsGroups().forEach(function(g){
     const all=g.items; if(!all.length) return;
     const done=all.filter(t=>t.st==='done').length, p=Math.round(done/all.length*100);
     const mine=all.filter(t=>t.st!=='done'&&wsMine(t)).length, oth=all.filter(t=>t.st!=='done'&&!wsMine(t)).length;
-    const vis=all.filter(wsPass).sort(wsSort);
+    const vis=all.filter(wsPass).sort(wsSort); const wsAct=vis.filter(function(t){return t.st!=='done'&&t.st!=='branch';}), wsBr=vis.filter(function(t){return t.st==='branch';}), wsDn=vis.filter(function(t){return t.st==='done';});
     const sub=[done+'/'+all.length+' faites',mine?mine+' pour moi':'',oth?oth+' chez les autres':''].filter(Boolean).join(' · ');
     h+='<div class="card ws-sec'+(wsOpen.has(g.key)?' open':'')+'" data-wssec="'+esc(g.key)+'">'
       +'<div class="ws-sh">'+wsRing(p,42,5,10.5)+'<div class="t"><b>'+esc(g.name)+'</b><span>'+esc(g.desc)+' — '+sub+'</span><div class="ws-prog"><i style="width:'+p+'%"></i></div></div><span class="ws-car">▸</span></div>'
-      +'<div class="ws-body">'+(vis.length?vis.map(wsTask).join(''):'<div class="empty" style="padding:10px 16px">Rien avec ce filtre.</div>')+'</div></div>';
+        h+='<div class="ws-body">'+(vis.length?(wsAct.map(wsTask).join('')+(wsBr.length?'<details class="ws-fold f-br"><summary onclick="event.stopPropagation()">Dans une branche a valider ('+wsBr.length+')</summary>'+wsBr.map(wsTask).join('')+'</details>':'')+(wsDn.length?'<details class="ws-fold f-dn"><summary onclick="event.stopPropagation()">Fait ('+wsDn.length+')</summary>'+wsDn.map(wsTask).join('')+'</details>':'')):'<div class="empty" style="padding:10px 16px">Rien avec ce filtre.</div>')+'</div></div>';
   });
   const wins=WS.filter(t=>t.st==='done').sort((a,b)=>wsDate(b.doneAt)-wsDate(a.doneAt));
   h+='<div class="card ws-sec'+(wsWinsOpen?' open':'')+'" data-wssec="__wins"><div class="ws-sh"><div class="t"><b>🏆 Mes victoires</b><span>'+wins.length+' tâches terminées, de la plus récente à la plus ancienne</span></div><span class="ws-car">▸</span></div>'
