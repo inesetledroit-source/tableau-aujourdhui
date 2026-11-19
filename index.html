@@ -289,6 +289,30 @@
   .agbtn{ border:1px solid #cfe0c6; background:#f2f7f0; color:#4d7b40; border-radius:8px; padding:5px 9px; font-size:12px; font-weight:600; cursor:pointer; flex:0 0 auto; white-space:nowrap; margin-top:1px; }
   .agbtn:hover{ background:#e7f0e3; border-color:#b7d3ab; }
   .agbtn:disabled{ opacity:.45; cursor:default; }
+  .acacts{ display:flex; gap:5px; flex:0 0 auto; flex-wrap:wrap; justify-content:flex-end; max-width:46%; }
+  .acbtn{ border:1px solid #e2ddd2; background:#fff; color:#6f6857; border-radius:8px; padding:5px 8px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
+  .acbtn.go{ border-color:#cfe0c6; background:#f2f7f0; color:#4d7b40; }
+  .acbtn:hover{ background:#f6f3ec; }
+  .acsrc{ display:inline-block; font-size:10px; font-weight:700; letter-spacing:.03em; padding:1px 6px; border-radius:6px; background:#efefef; color:#6a6a6a; margin-right:5px; vertical-align:1px; }
+  .acsrc.slack{ background:#f3e8f5; color:#7a3f86; } .acsrc.gmail{ background:#fbebeb; color:#a33b3b; } .acsrc.tete{ background:#f6ece2; color:#a5683a; }
+  .acrel{ background:#fff7e0; border-radius:10px; padding-left:8px; }
+  .typechip{ border:1px solid #e2ddd2; background:#fff; border-radius:20px; padding:7px 12px; font-size:13px; font-weight:600; cursor:pointer; color:#6f6857; margin:0 6px 6px 0; }
+  .typechip.on{ background:#4a4438; color:#fff; border-color:#4a4438; }
+  .subtabs{ display:flex; gap:8px; margin-top:14px; }
+  .subtab{ border:1px solid #e2ddd2; background:#fff; border-radius:20px; padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer; color:#6f6857; font-family:inherit; }
+  .subtab.on{ background:#2f2a22; color:#fff; border-color:#2f2a22; }
+  .subtab .count{ margin-left:4px; }
+  .inv{ border-bottom:1px solid #f2efe8; }
+  .inv:last-child{ border-bottom:none; }
+  .invhead{ display:flex; align-items:center; gap:8px; padding:10px 0; cursor:pointer; flex-wrap:wrap; }
+  .invico{ flex:0 0 auto; } .invq{ flex:1 1 180px; font-weight:600; color:#2f2a22; font-size:14px; }
+  .invdate,.invrep,.invst{ font-size:11px; font-weight:700; padding:2px 7px; border-radius:6px; background:#f2efe8; color:#6f6857; white-space:nowrap; }
+  .invdate.past{ text-decoration:line-through; opacity:.6; } .invrep.soon{ background:#fbebeb; color:#a33b3b; }
+  .invcaret{ color:#b0a894; font-size:11px; }
+  .invbody{ padding:0 0 12px 26px; } .invnote{ margin-top:6px; font-size:13px; color:#4a4438; background:#faf8f3; border-radius:8px; padding:8px 10px; }
+  #invOverlay .typechip{ font-family:inherit; }
+  .acnudge{ display:none; margin:14px 0 0; padding:10px 12px; border-radius:12px; background:#f6f3ec; color:#6f6857; font-size:13px; font-weight:600; cursor:pointer; }
+  .acnudge:hover{ background:#efeadf; }
   .morebtn{ width:100%; margin-top:10px; border:1px dashed #ded8ca; background:none; color:#8a8375; border-radius:10px; padding:8px; font-size:12.5px; font-weight:600; cursor:pointer; }
   .morebtn:hover{ background:#faf8f3; }
   .dtin{ width:100%; border:1px solid #e2ddd2; border-radius:10px; padding:11px 12px; font-size:15px; background:#fdfcfa; font-family:inherit; }
@@ -297,8 +321,8 @@
   /* Bouton d'ajout de tâche, collé à droite du titre de section. */
   #ntOpen{ margin-left:auto; }
   #ntTitre{ width:100%; border:1px solid #e2ddd2; border-radius:10px; padding:11px 12px; font-size:15px; background:#fdfcfa; font-family:inherit; margin-bottom:12px; }
-  #ntOverlay .calbtn{ border:1px solid #e2ddd2; background:#fff; border-radius:20px; padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer; color:#6f6857; font-family:inherit; }
-  #ntOverlay .calbtn.on{ background:#2f2a22; color:#fff; border-color:#2f2a22; }
+  #ntOverlay .calbtn, #casOverlay .calbtn{ border:1px solid #e2ddd2; background:#fff; border-radius:20px; padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer; color:#6f6857; font-family:inherit; }
+  #ntOverlay .calbtn.on, #casOverlay .calbtn.on{ background:#2f2a22; color:#fff; border-color:#2f2a22; }
   /* ---- 🌐 Avancée du site (Sheet TO DO WEBSITE) ---- */
   .ws-top{ display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
   .ws-gauge{ text-align:center; flex:0 0 150px; }
@@ -341,8 +365,7 @@
   .ws-chip{ font-size:10.5px; font-weight:700; border-radius:10px; padding:2px 8px; background:#f1efe9; color:#8a8375; }
   .ws-chip.who{ background:#f1eef9; color:#5f4fa0; }
   .ws-chip.urg{ background:#fdeceb; color:#b5443a; }
-  .ws-chip.s-done{ background:#eef5ea; color:#4d7b40; } .ws-chip.s-wait{ background:#fbf1e4; color:#a5683a; } .ws-chip.s-doing{ background:#eef3f9; color:#3b6ea5; } .ws-chip.s-branch{ background:#f1eef9; color:#5f4fa0; }
-.ws-fold{ margin:6px 0 0; } .ws-fold>summary{ cursor:pointer; list-style:none; font-size:11.5px; font-weight:700; color:#8a8375; padding:6px 16px; } .ws-fold>summary::-webkit-details-marker{ display:none; } .ws-fold>summary::before{ content:'\25B8 '; } .ws-fold[open]>summary::before{ content:'\25BE '; } .ws-fold .ws-tt{ text-decoration:line-through; color:#a49c8c; }
+  .ws-chip.s-done{ background:#eef5ea; color:#4d7b40; } .ws-chip.s-wait{ background:#fbf1e4; color:#a5683a; } .ws-chip.s-doing{ background:#eef3f9; color:#3b6ea5; }
   .ws-td{ display:none; padding:0 16px 12px 37px; }
   .ws-task.x .ws-td{ display:block; }
   .ws-det{ white-space:pre-wrap; background:#faf8f3; border-radius:10px; padding:9px 11px; font-size:13px; color:#4a4438; margin-bottom:8px; }
@@ -375,7 +398,7 @@
   <div class="tabbar" id="tabbar">
     <button class="tabbtn on" data-tab="today">☀️ Aujourd'hui</button>
     <button class="tabbtn" data-tab="site">🌐 Site <span class="tbadge" id="c-site"></span></button>
-    <button class="tabbtn" data-tab="todo">📋 To-do <span class="tbadge" id="c-todo"></span></button>
+    <button class="tabbtn" data-tab="todo">📥 Tâches à affecter <span class="tbadge" id="c-todo"></span></button>
     <button class="tabbtn" data-tab="mail">📧 Mails <span class="tbadge" id="c-mail"></span></button>
     <button class="tabbtn" data-tab="perf">📈 Perfs</button>
     <button class="tabbtn" data-tab="edito">✍️ Édito</button>
@@ -416,7 +439,8 @@
         <button class="btn btn-primary" id="closeDay">🌙 Clôturer ma journée — reporter les non-faits à demain</button>
       </div>
 
-      <div class="section-title sante-head" id="brainHead" role="button" tabindex="0"><span class="sante-caret">▶</span>🧠 Vide-tête <span class="count" id="c-brain">0</span></div>
+      <div class="acnudge" id="acNudge"></div>
+      <div class="section-title sante-head" id="brainHead" role="button" tabindex="0" style="display:none"><span class="sante-caret">▶</span>🧠 Vide-tête <span class="count" id="c-brain">0</span></div>
       <div class="card" id="brainCard" style="display:none">
         <div class="bd-input"><input id="bdText" placeholder="Un truc qui te passe par la tête…" autocomplete="off"></div>
         <div class="tags"><span class="bd-hint" style="margin:0 4px 0 0;">Ranger dans :</span>
@@ -438,7 +462,27 @@
 
   <!-- ============ ONGLET TO-DO ============ -->
   <section class="pane" id="pane-todo" hidden>
-    <div class="card" id="todo" style="margin-top:14px"><div class="empty">Chargement de la Sheet…</div></div>
+    <div class="subtabs"><button class="subtab on" data-sub="tasks">✅ Tâches</button><button class="subtab" data-sub="inv">🎤 Projets & invitations <span class="count" id="c-inv"></span></button></div>
+    <div id="subTasks">
+    <div class="card" id="acCard" style="margin-top:10px">
+      <div class="bd-input" style="display:flex;gap:8px"><input id="acText" placeholder="Un truc à faire qui te passe par la tête… (Entrée)" autocomplete="off" style="flex:1"><button class="pausebtn" id="acPass" title="Ramasse tout ce que tu as marqué 📌 (Gmail tout de suite, Slack via Claude) et rafraîchit la liste">🔄 Passe partout</button></div>
+      <div class="bd-hint" id="acStatus"></div>
+      <div id="acOld"></div>
+      <div id="acList"><div class="empty">Chargement…</div></div>
+      <div id="acLaterBox"></div>
+    </div>
+    <div class="section-title sante-head" id="waHead" role="button" tabindex="0"><span class="sante-caret">▶</span>⏸ En attente de… <span class="count" id="c-wa">0</span></div>
+    <div class="card" id="waList" style="display:none"></div>
+    </div>
+    <div id="subInv" style="display:none">
+      <div class="card" id="invCard" style="margin-top:10px">
+        <div class="bd-input" style="display:flex;gap:8px"><input id="invText" placeholder="Une interview, un événement, un projet… (Entrée)" autocomplete="off" style="flex:1"><button class="pausebtn" id="invAddBtn">+ Ajouter</button></div>
+        <div class="bd-hint">Interviews, événements, propositions de projets… Pas des tâches : des choses à garder en vue, toutes au même niveau. Clique sur une ligne pour la dérouler.</div>
+        <div id="invList"><div class="empty">Chargement…</div></div>
+        <div id="invArch"></div>
+      </div>
+    </div>
+    <div class="card" id="todo" style="display:none"></div>
   </section>
 
   <!-- ============ ONGLET SITE (avancée du site, Sheet TO DO WEBSITE) ============ -->
@@ -491,9 +535,9 @@
   <p id="agName" style="font-weight:600;color:#4a4438;margin:0 0 12px"></p>
   <input type="datetime-local" id="agWhen" class="dtin">
   <div class="tags" style="margin-top:12px"><span class="bd-hint" style="margin:0 4px 0 0;">Durée :</span>
+    <button class="durbtn" data-dur="15">15 min</button>
     <button class="durbtn" data-dur="30">30 min</button>
     <button class="durbtn on" data-dur="60">1 h</button>
-    <button class="durbtn" data-dur="120">2 h</button>
   </div>
   <div class="bd-hint">La tâche est créée dans ton agenda principal, puis la ligne passe de « en cours » à « déjà dans agenda ».</div>
   <div class="mactions"><button class="btn btn-ghost" id="agCancel">Annuler</button><button class="btn btn-go" id="agGo">Créer</button></div>
@@ -507,12 +551,53 @@
   </div>
   <input type="datetime-local" id="ntWhen" class="dtin">
   <div class="tags" style="margin-top:12px"><span class="bd-hint" style="margin:0 4px 0 0;">Durée :</span>
+    <button class="durbtn" data-ndur="15">15 min</button>
     <button class="durbtn on" data-ndur="30">30 min</button>
     <button class="durbtn" data-ndur="60">1 h</button>
-    <button class="durbtn" data-ndur="120">2 h</button>
   </div>
   <div class="bd-hint" id="ntHint"></div>
   <div class="mactions"><button class="btn btn-ghost" id="ntCancel">Annuler</button><button class="btn btn-go" id="ntGo">Créer</button></div>
+</div></div>
+<div class="overlay" id="casOverlay"><div class="modal">
+  <h3>⚡ Caser aujourd'hui</h3>
+  <p id="casName" style="font-weight:600;color:#4a4438;margin:0 0 12px"></p>
+  <div class="tags" style="margin-bottom:12px"><span class="bd-hint" style="margin:0 4px 0 0;">Agenda :</span>
+    <button class="calbtn on" data-ccal="pro">💼 pro</button>
+    <button class="calbtn" data-ccal="perso">🏠 perso</button>
+  </div>
+  <div class="tags"><span class="bd-hint" style="margin:0 4px 0 0;">Durée :</span>
+    <button class="durbtn" data-cdur="15">15 min</button>
+    <button class="durbtn on" data-cdur="30">30 min</button>
+    <button class="durbtn" data-cdur="60">1 h</button>
+  </div>
+  <div class="bd-hint" id="casHint" style="margin-top:12px"></div>
+  <div class="mactions" style="flex-wrap:wrap"><button class="btn btn-ghost" id="casCancel">Annuler</button><button class="btn btn-ghost" id="casForce">Caser quand même maintenant</button><button class="btn btn-go" id="casGo">Caser</button></div>
+</div></div>
+<div class="overlay" id="waOverlay"><div class="modal">
+  <h3>⏸ Mettre en attente</h3>
+  <p id="waName" style="font-weight:600;color:#4a4438;margin:0 0 12px"></p>
+  <input type="text" id="waWho" placeholder="Tu attends quoi, ou qui ? (ex : retour d'Esther)">
+  <div class="bd-hint" style="margin:10px 0 6px">Date de relance — ce jour-là, la tâche revient dans « Tâches à affecter » :</div>
+  <input type="date" id="waDate" class="dtin">
+  <div class="mactions"><button class="btn btn-ghost" id="waCancel">Annuler</button><button class="btn btn-go" id="waGo">Mettre en attente</button></div>
+</div></div>
+<div class="overlay" id="valOverlay"><div class="modal">
+  <h3>✅ Bien joué — on range ça où ?</h3>
+  <p id="valName" style="font-weight:600;color:#4a4438;margin:0 0 4px"></p>
+  <div class="bd-hint" id="valTime" style="margin:0 0 12px"></div>
+  <div class="tags" id="valTypes"></div>
+  <input type="text" id="valProj" placeholder="Projet / client (facultatif — ex : UNSA, Tiime, site)" style="margin-top:12px">
+  <div class="bd-hint">La tâche part dans l'onglet « Tâches réalisées » de TO DO 2026, avec le temps passé.</div>
+  <div class="mactions"><button class="btn btn-ghost" id="valSkip">Ne pas enregistrer</button><button class="btn btn-go" id="valGo">Enregistrer</button></div>
+</div></div>
+<div class="overlay" id="invOverlay"><div class="modal">
+  <h3 id="invTitle">🎤 Nouveau projet / invitation</h3>
+  <input type="text" id="invQuoi" placeholder="Quoi ? (ex : ITW podcast, événement, proposition de projet…)">
+  <input type="text" id="invQui" style="margin-top:10px" placeholder="De qui ? (ex : Nolwen / boîte Intello)">
+  <div style="display:flex;gap:10px;margin-top:10px"><div style="flex:1"><div class="bd-hint" style="margin:0 0 4px">Date (événement, tournage…)</div><input type="date" id="invDate" class="dtin"></div><div style="flex:1"><div class="bd-hint" style="margin:0 0 4px">Répondre avant le</div><input type="date" id="invRep" class="dtin"></div></div>
+  <input type="text" id="invLien" placeholder="Lien (mail, Slack, doc…) — facultatif" style="margin-top:10px">
+  <textarea id="invNote" class="aiq" placeholder="Petite note (où ça en est, ce que tu en penses…)" style="margin-top:10px"></textarea>
+  <div class="mactions"><button class="btn btn-ghost" id="invCancel">Annuler</button><button class="btn btn-go" id="invGo">Enregistrer</button></div>
 </div></div>
 <div class="overlay" id="pauseOverlay"><div class="pausebox">
   <span class="pe" id="pauseEmoji">☕</span>
@@ -535,7 +620,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-11-17-2';
+const VERSION='2026-11-19-4';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -715,6 +800,7 @@ async function toggleDone(ev){
   catch(err){ ev.summary=cur; render(); toast('⚠️ '+err.message); }
   // tâche terminée = bon moment pour couper, si la suivante ferait dépasser 45 min
   if(!nowDone) pauseSiCaTombeBien();
+  if(!nowDone){ try{ casLogDone(ev); }catch(e){} }
 }
 function labelFor(url){ try{const h=new URL(url).hostname.replace('www.','');
   if(h.includes('docs.google'))return 'Doc'; if(h.includes('drive.google'))return 'Drive'; if(h.includes('sheets.google'))return 'Sheet';
@@ -1272,7 +1358,7 @@ async function loadTodo(){
   }
 }
 function renderTodo(){
-  setBadge('c-todo',TODO.length);
+
   if(!TODO.length){ $('todo').innerHTML='<div class="empty">Ta to-do « en cours » est vide 🎉</div>'; return; }
   const list=TODO_ALL?TODO:TODO.slice(0,TODO_VISIBLE);
   let h=list.map(function(t,i){
@@ -1339,7 +1425,7 @@ async function doAgenda(){
     try{ await moveRowToAgendaTab(t); toast('📅 Dans l’agenda + ligne déplacée'); }
     catch(err){ toast('📅 Dans l’agenda, mais Sheet : '+err.message); }
     $('agOverlay').classList.remove('on');
-    await loadTodo(); await loadToday(true);
+    await loadTodo(); await loadToday(true); try{ loadAC(); }catch(x){}
   }catch(err){ toast('⚠️ '+err.message); }
   $('agGo').disabled=false;
 }
@@ -2185,12 +2271,12 @@ $('vtGo').addEventListener('click',envoyerVT);
 
 /* ================= ONGLETS ================= */
 const PANES=['today','todo','site','mail','perf','edito'];
-const TABTITLE={site:'Avancée du site',mail:'Mails',todo:'To-do website',perf:'Perfs de contenu',edito:'Édito'};
+const TABTITLE={site:'Avancée du site',mail:'Mails',todo:'Tâches à affecter',perf:'Perfs de contenu',edito:'Édito'};
 const SUBLINE={
   today:"Toute ta journée, tous tes agendas, en une page.",
   site:"Ta Sheet TO DO WEBSITE : où en est le site, étape par étape.",
   mail:"Ce qui attend une réponse, dossier par dossier.",
-  todo:"Ta Sheet « EN COURS », de la plus urgente à la moins.",
+  todo:"Tout ce qui t'attend : 📌 Slack, 📌 Gmail, ta tête, ta Sheet. Tu places, tu reportes ou tu mets en attente.",
   perf:"Instagram et Facebook, 30 derniers jours.", edito:""
 };
 let TAB=loadJSON('td_tab','today'); if(PANES.indexOf(TAB)<0) TAB='today';
@@ -2222,7 +2308,7 @@ $('tabbar').addEventListener('click',function(e){
 let brainOpen=loadJSON('td_brainopen',false);
 function applyBrainOpen(){
   $('brainHead').classList.toggle('open',brainOpen);
-  $('brainCard').style.display=brainOpen?'block':'none';
+  $('brainCard').style.display='none';
 }
 $('brainHead').addEventListener('click',function(){
   brainOpen=!brainOpen; saveJSON('td_brainopen',brainOpen); applyBrainOpen();
@@ -2333,11 +2419,11 @@ const WS_STEPS=[
   {k:'SITE A AMELIORER',n:'4 · Améliorations',d:'pour plus tard'},
   {k:'',n:'À classer',d:'lignes sans étape dans la Sheet'}
 ];
-const WS_ST={done:'Terminé',doing:'En cours',wait:'en attente',branch:'Dans branche à valider',todo:'Pas commencé'};
-const WS_STL={done:'Fait',doing:'En cours',wait:'En attente',branch:'Branche à valider',todo:'Pas commencé'};
+const WS_ST={done:'Terminé',doing:'En cours',wait:'en attente',todo:'Pas commencé'};
+const WS_STL={done:'Fait',doing:'En cours',wait:'En attente',todo:'Pas commencé'};
 let WS=[], wsView=loadJSON('td_wsview','etape'), wsFilt='all', wsOpen=new Set(['MAINTENANT']), wsOpenT=new Set(), wsMsg={}, wsWinsOpen=false;
 
-function wsStatus(s){ s=norm(s); if(s==='termine') return 'done'; if(s==='en cours') return 'doing'; if(s==='en attente') return 'wait'; if(s.indexOf('branche')>=0) return 'branch'; return 'todo'; }
+function wsStatus(s){ s=norm(s); if(s==='termine') return 'done'; if(s==='en cours') return 'doing'; if(s==='en attente') return 'wait'; return 'todo'; }
 function wsMine(t){ const w=norm(t.who); return w===''||w==='ines'; }
 function wsPrio(p){ const n=norm(p); return n.indexOf('tres urgent')>=0?0:(n.indexOf('urgent')>=0?1:(n.indexOf('moder')>=0?2:(n.indexOf('faible')>=0?3:4))); }
 function wsDate(s){ const m=String(s||'').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); return m?new Date(+m[3],+m[2]-1,+m[1]).getTime():0; }
@@ -2363,7 +2449,6 @@ async function loadSite(){
   }
 }
 function wsPass(t){
-      if(wsFilt==='branch') return t.st==='branch';
   if(wsFilt==='done') return t.st==='done';
   if(wsFilt==='mine') return t.st!=='done'&&wsMine(t);
   if(wsFilt==='others') return t.st!=='done'&&!wsMine(t);
@@ -2403,17 +2488,17 @@ function renderSite(){
     +'<div class="ws-bar"><div class="ws-seg">'
     +['etape:Par étape','pers:Par personne'].map(x=>{const k=x.split(':');return '<button data-wsv="'+k[0]+'" class="'+(wsView===k[0]?'on':'')+'">'+k[1]+'</button>';}).join('')
     +'</div><div class="ws-seg">'
-    +['all:Tout','mine:Mes tâches','others:J’attends','branch:Branches','done:Fait'].map(x=>{const k=x.split(':');return '<button data-wsf="'+k[0]+'" class="'+(wsFilt===k[0]?'on':'')+'">'+k[1]+'</button>';}).join('')
+    +['all:Tout','mine:Mes tâches','others:J’attends','done:Fait'].map(x=>{const k=x.split(':');return '<button data-wsf="'+k[0]+'" class="'+(wsFilt===k[0]?'on':'')+'">'+k[1]+'</button>';}).join('')
     +'</div></div></div>';
   wsGroups().forEach(function(g){
     const all=g.items; if(!all.length) return;
     const done=all.filter(t=>t.st==='done').length, p=Math.round(done/all.length*100);
     const mine=all.filter(t=>t.st!=='done'&&wsMine(t)).length, oth=all.filter(t=>t.st!=='done'&&!wsMine(t)).length;
-    const vis=all.filter(wsPass).sort(wsSort); const wsAct=vis.filter(function(t){return t.st!=='done'&&t.st!=='branch';}), wsBr=vis.filter(function(t){return t.st==='branch';}), wsDn=vis.filter(function(t){return t.st==='done';});
+    const vis=all.filter(wsPass).sort(wsSort);
     const sub=[done+'/'+all.length+' faites',mine?mine+' pour moi':'',oth?oth+' chez les autres':''].filter(Boolean).join(' · ');
     h+='<div class="card ws-sec'+(wsOpen.has(g.key)?' open':'')+'" data-wssec="'+esc(g.key)+'">'
       +'<div class="ws-sh">'+wsRing(p,42,5,10.5)+'<div class="t"><b>'+esc(g.name)+'</b><span>'+esc(g.desc)+' — '+sub+'</span><div class="ws-prog"><i style="width:'+p+'%"></i></div></div><span class="ws-car">▸</span></div>'
-        h+='<div class="ws-body">'+(vis.length?(wsAct.map(wsTask).join('')+(wsBr.length?'<details class="ws-fold f-br"><summary onclick="event.stopPropagation()">Dans une branche a valider ('+wsBr.length+')</summary>'+wsBr.map(wsTask).join('')+'</details>':'')+(wsDn.length?'<details class="ws-fold f-dn"><summary onclick="event.stopPropagation()">Fait ('+wsDn.length+')</summary>'+wsDn.map(wsTask).join('')+'</details>':'')):'<div class="empty" style="padding:10px 16px">Rien avec ce filtre.</div>')+'</div></div>';
+      +'<div class="ws-body">'+(vis.length?vis.map(wsTask).join(''):'<div class="empty" style="padding:10px 16px">Rien avec ce filtre.</div>')+'</div></div>';
   });
   const wins=WS.filter(t=>t.st==='done').sort((a,b)=>wsDate(b.doneAt)-wsDate(a.doneAt));
   h+='<div class="card ws-sec'+(wsWinsOpen?' open':'')+'" data-wssec="__wins"><div class="ws-sh"><div class="t"><b>🏆 Mes victoires</b><span>'+wins.length+' tâches terminées, de la plus récente à la plus ancienne</span></div><span class="ws-car">▸</span></div>'
@@ -2433,7 +2518,7 @@ function wsTask(t){
     +'<div class="ws-th"><span class="ws-dot"></span><div class="ws-tt">'+esc(t.title)+'<div class="ws-chips">'+ch.join('')+'</div></div><a class="ws-sheet" href="'+url+'" target="_blank" rel="noopener">Sheet ↗</a></div>'
     +'<div class="ws-td">'+(t.det?'<div class="ws-det">'+esc(t.det)+'</div>':'<div class="ws-det" style="color:#a49c8c">Pas de détail dans la Sheet.</div>')
     +link+'<div class="ws-meta">'+esc(meta)+(meta?' · ':'')+'<a class="ws-sheetl" href="'+url+'" target="_blank" rel="noopener">Ouvrir la ligne '+t.row+' dans la Sheet ↗</a></div>'
-    +'<div class="ws-acts">'+['todo','doing','wait','branch','done'].map(s=>'<button data-wsset="'+s+'" class="'+(t.st===s?'cur':'')+'">'+WS_STL[s]+'</button>').join('')+'</div>'
+    +'<div class="ws-acts">'+['todo','doing','wait','done'].map(s=>'<button data-wsset="'+s+'" class="'+(t.st===s?'cur':'')+'">'+WS_STL[s]+'</button>').join('')+'</div>'
     +(m?'<div class="ws-msg'+(m.charAt(0)==='!'?' err':'')+'">'+esc(m.replace(/^!/,''))+'</div>':'')
     +'</div></div>';
 }
@@ -2468,7 +2553,7 @@ $('site').addEventListener('click',function(e){
     if(k==='__wins') wsWinsOpen=!wsWinsOpen; else (wsOpen.has(k)?wsOpen.delete(k):wsOpen.add(k)); renderSite(); return; }
 });
 
-function loadExtras(){ loadMails(); loadTodo(); loadSite(); loadPerfs(); }
+function loadExtras(){ loadMails(); loadTodo(); loadSite(); loadPerfs(); try{ loadAC(); }catch(e){} try{ loadInv(); }catch(e){} }
 
 let _tdStarted=false;
 function startApp(){
@@ -2492,6 +2577,481 @@ document.getElementById('gBtn').addEventListener('click', async function(){
   if(c){ ACCESS_TOKEN=c; startApp(); return; }
   let n=0; (function waitSilent(){ if(!tokenClient){ if(n++<25){ setTimeout(waitSilent,300); } else showGate(''); return; } getToken().then(function(){ startApp(); }).catch(function(){ showGate(''); }); })();
 })();
+</script>
+<script>
+/* =====================================================================
+   📥 À CASER — ajouté le 19/11/2026
+   Une seule zone pour tout ce qui t'attend. La source, c'est l'onglet
+   « EN COURS » de TO DO 2026 : les tâches que tu y avais, + ce que tu notes
+   ici (ta tête), + les mails 📌 Tâche, + les messages Slack 📌 (ajoutés par
+   la passe de Claude).
+   Pour chaque tâche : ⚡ Aujourd'hui (prochain créneau libre) · 📅 Date
+   (tu choisis) · ⏳ Plus tard · ⏸ En attente (avec date de relance).
+   Quand tu coches ✅ une tâche du jour, elle part dans « Tâches réalisées »
+   avec le temps passé, le type et le projet / client.
+   ===================================================================== */
+const AC_TAB_ENCOURS='EN COURS', AC_TAB_AGENDA='TACHES DEJA DS AGENDA', AC_TAB_DONE='Tâches réalisées';
+const AC_TYPES=['Admin','Collabs','Création de contenu','Site internet','Médias','Formation','Perso'];
+const K={ cre:norm('DATE CREATION'), type:norm('TYPE'), prio:norm('PRIORITE'), pour:norm('POUR'), action:norm('ACTION'),
+          etat:norm('ETAT'), att:norm("DATE DE L'ATTENDU"), real:norm('DATE REALISATION'), lien:norm('LIENS VERS DOC'),
+          det:norm('DETAILS'), src:norm('SOURCE'), temps:norm('TEMPS PASSE (MIN)'), proj:norm('PROJET / CLIENT') };
+let AC={tab:null,H:[],rows:[]}, AC_VIEW=[], AC_LATER=loadJSON('td_aclater',{}), AC_SHOWLATER=false,
+    AC_TGT=null, CAS_DUR=30, CAS_CAL='pro', CAS_SLOT=null, AC_SLACK='', VAL_EV=null, VAL_TYPE='';
+let WA_OPEN=loadJSON('td_waopen',false);
+
+function frDate(d){ return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear(); }
+function parseFr(s){ const m=String(s||'').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m?new Date(+m[3],+m[2]-1,+m[1]):null; }
+function hhmm(d){ return pad(d.getHours())+'h'+pad(d.getMinutes()); }
+function colLetter(i){ let s=''; i++; while(i>0){ const m=(i-1)%26; s=String.fromCharCode(65+m)+s; i=Math.floor((i-1)/26); } return s; }
+function srcKind(r){ const s=norm(r.source); if(s.indexOf('slack')>=0) return 'slack'; if(s.indexOf('mail')>=0) return 'gmail'; if(s.indexOf('tete')>=0||s.indexOf('vide')>=0) return 'tete'; return ''; }
+function srcLabel(k){ return {slack:'Slack',gmail:'Gmail',tete:'Tête'}[k]||''; }
+function isWait(r){ return norm(r.etat).indexOf('attente')>=0; }
+function isDue(r){ if(!isWait(r)) return false; const d=parseFr(r.att); if(!d) return false; const t=new Date(); t.setHours(23,59,59,0); return d<=t; }
+function acKey(r){ return norm(r.action); }
+
+async function acTab(title){ await sheetMeta(); const t=findTab(title,null,null); if(!t) throw new Error('onglet « '+title+' » introuvable'); const d=await readTab(t.title); if(d.headerIndex<0) throw new Error('en-têtes introuvables dans « '+title+' »'); return {tab:t,d:d}; }
+function lineFor(H,obj){ return H.map(function(h){ return (h && obj[h]!=null) ? obj[h] : ''; }); }
+async function acAppend(title,objs){
+  const x=await acTab(title);
+  await sh('POST','/values/'+a1(x.tab.title,'A1')+':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS',{values:objs.map(function(o){ return lineFor(x.d.headers,o); })});
+}
+/* Vérifie que la ligne n'a pas bougé dans la Sheet avant d'y toucher */
+async function acCheck(r){
+  const res=await sh('GET','/values/'+a1(AC.tab.title,'A'+(r.rowIdx+1)+':Z'+(r.rowIdx+1)));
+  const v=(res.values&&res.values[0])||[]; const c=AC.H.indexOf(K.action);
+  if(norm(v[c]||'')!==norm(r.action)){ toast('La Sheet a bougé entre-temps, je recharge — réessaie'); await loadAC(); throw new Error('ligne déplacée'); }
+}
+async function acSetCells(r,obj){
+  await acCheck(r);
+  const data=[]; Object.keys(obj).forEach(function(k){ const c=AC.H.indexOf(k); if(c>=0) data.push({range:"'"+AC.tab.title.replace(/'/g,"''")+"'!"+colLetter(c)+(r.rowIdx+1), values:[[obj[k]]]}); });
+  if(data.length) await sh('POST','/values:batchUpdate',{valueInputOption:'USER_ENTERED',data:data});
+}
+async function acDeleteRow(r){
+  await acCheck(r);
+  await sh('POST',':batchUpdate',{requests:[{deleteDimension:{range:{sheetId:AC.tab.sheetId,dimension:'ROWS',startIndex:r.rowIdx,endIndex:r.rowIdx+1}}}]});
+}
+
+/* ---------- lecture ---------- */
+async function loadAC(){
+  try{
+    const x=await acTab(AC_TAB_ENCOURS); const H=x.d.headers;
+    AC.tab=x.tab; AC.H=H; AC.rows=[];
+    const g=function(r,k){ const c=H.indexOf(k); return c>=0?String(r[c]==null?'':r[c]):''; };
+    for(let i=x.d.headerIndex+1;i<x.d.rows.length;i++){
+      const r=x.d.rows[i]||[]; const act=g(r,K.action).trim(); if(!act) continue;
+      AC.rows.push({rowIdx:i,values:r,action:act,type:g(r,K.type),prio:g(r,K.prio),etat:g(r,K.etat),att:g(r,K.att),
+        lien:g(r,K.lien).trim(),det:g(r,K.det),source:g(r,K.src),cre:g(r,K.cre)});
+    }
+    try{ const e=await sh('GET','/values/'+encodeURIComponent('ETAT!D1:E1')); const v=(e.values&&e.values[0])||[]; AC_SLACK=v[1]||''; }catch(e){ AC_SLACK=''; }
+    renderAC();
+  }catch(e){
+    $('acList').innerHTML='<div class="empty">⚠️ Sheet : '+esc(e.message)+'</div>'; setBadge('c-todo','!');
+  }
+}
+
+/* ---------- affichage ---------- */
+function acItem(r,i,laterList){
+  const due=isDue(r), k=srcKind(r), pr=prioRank(r.prio);
+  const meta=[r.type, r.cre?('ajouté le '+r.cre):'', r.det].filter(function(x){ return String(x||'').trim(); }).join(' · ');
+  const link=/^https?:\/\//i.test(r.lien)
+    ? '<div class="links"><a class="lnk" target="_blank" rel="noopener" href="'+esc(r.lien)+'">'+iconFor(r.lien)+' '+esc(labelFor(r.lien))+'</a></div>'
+    : (r.lien?'<div class="tdm">📎 '+esc(r.lien)+'</div>':'');
+  let acts;
+  if(due) acts='<button class="acbtn go" data-a="cas" data-i="'+i+'">⚡ Relancer auj.</button><button class="acbtn" data-a="got" data-i="'+i+'">✓ Reçu</button><button class="acbtn" data-a="more" data-i="'+i+'">+7 j</button>';
+  else if(laterList) acts='<button class="acbtn go" data-a="cas" data-i="'+i+'">⚡ Aujourd’hui</button><button class="acbtn" data-a="unlater" data-i="'+i+'">↩ Remettre</button>';
+  else acts='<button class="acbtn go" data-a="cas" data-i="'+i+'">⚡ Aujourd’hui</button><button class="acbtn" data-a="date" data-i="'+i+'">📅 Date</button><button class="acbtn" data-a="later" data-i="'+i+'">⏳ Plus tard</button><button class="acbtn" data-a="wait" data-i="'+i+'">⏸ Attente</button><button class="acbtn" data-a="proj" data-i="'+i+'" title="Ce n\'est pas une tâche : le ranger dans Projets & invitations">🎤 Projet</button>';
+  return '<div class="todo'+(due?' acrel':'')+'">'
+    +(r.prio?'<span class="prio '+prioClass(pr)+'">'+esc(prioLabel(r.prio))+'</span>':'')
+    +'<div class="tdb"><div class="tdt">'+(due?'🔔 Relancer — ':'')+(k?'<span class="acsrc '+k+'">'+srcLabel(k)+'</span>':'')+esc(r.action)+'</div>'
+    +(meta?'<div class="tdm">'+esc(meta)+'</div>':'')+link+'</div>'
+    +'<div class="acacts">'+acts+'</div></div>';
+}
+function renderAC(){
+  const todayKey=ymd(new Date());
+  const open=AC.rows.filter(function(r){ return !isWait(r) || isDue(r); });
+  const waits=AC.rows.filter(function(r){ return isWait(r) && !isDue(r); });
+  const later=open.filter(function(r){ return !isDue(r) && AC_LATER[acKey(r)]; });
+  const now=open.filter(function(r){ return later.indexOf(r)<0; });
+  now.sort(function(a,b){ return ((isDue(b)?1:0)-(isDue(a)?1:0)) || (prioRank(b.prio)-prioRank(a.prio)) || (((parseFr(b.cre)||0)-(parseFr(a.cre)||0))); });
+  AC_VIEW=[];
+  const add=function(r){ AC_VIEW.push(r); return AC_VIEW.length-1; };
+  const dueN=now.filter(isDue).length;
+  setBadge('c-todo',now.length);
+  $('acList').innerHTML = now.length ? now.map(function(r){ return acItem(r,add(r),false); }).join('')
+    : '<div class="empty">Rien à affecter 🎉</div>';
+  $('acLaterBox').innerHTML = later.length
+    ? '<button class="morebtn" id="acLaterBtn">'+(AC_SHOWLATER?'▴':'▾')+' ⏳ Plus tard ('+later.length+')</button>'
+      +(AC_SHOWLATER?later.map(function(r){ return acItem(r,add(r),true); }).join(''):'')
+    : '';
+  /* en attente */
+  setBadge('c-wa',waits.length);
+  $('waHead').classList.toggle('open',WA_OPEN);
+  $('waList').style.display=WA_OPEN?'block':'none';
+  $('waList').innerHTML = waits.length ? waits.map(function(r){
+      const i=add(r);
+      return '<div class="todo"><div class="tdb"><div class="tdt">'+esc(r.action)+'</div><div class="tdm">'
+        +esc([r.det, r.att?('relance le '+r.att):'pas de date de relance'].filter(Boolean).join(' · '))+'</div></div>'
+        +'<div class="acacts"><button class="acbtn" data-a="got" data-i="'+i+'">✓ Reçu</button><button class="acbtn" data-a="relnow" data-i="'+i+'">🔔 Relancer</button></div></div>';
+    }).join('') : '<div class="empty">Tu n’attends personne 🙂</div>';
+  /* ancien vide-tête */
+  const old=(brain||[]);
+  $('acOld').innerHTML = old.length ? '<div class="bd-hint" style="margin:8px 0">📝 '+old.length+' note'+(old.length>1?'s':'')+' dans ton ancien vide-tête. <button class="acbtn" id="acOldGo">Les envoyer dans les tâches à affecter</button></div>' : '';
+  /* statut des passes */
+  let st='';
+  if(AC_SLACK){ const d=new Date(AC_SLACK); st+='Slack : dernière passe '+(isNaN(d)?AC_SLACK:(d.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'})+' à '+hhmm(d)))+'. '; }
+  else st+='Slack : pas encore de passe. ';
+  st+='<a href="#" id="acSlackNow">Demander une passe Slack à Claude</a>';
+  $('acStatus').innerHTML=st;
+  /* rappel sur l'écran Aujourd'hui */
+  const nud=$('acNudge');
+  if(nud){ nud.style.display=now.length?'block':'none'; nud.textContent='📥 '+now.length+' tâche'+(now.length>1?'s':'')+' à affecter'+(dueN?(' — dont 🔔 '+dueN+' relance'+(dueN>1?'s':'')):'')+' →'; }
+}
+
+/* ---------- ajout depuis ta tête ---------- */
+async function acAddText(){
+  const t=($('acText').value||'').trim(); if(!t) return;
+  $('acText').value='';
+  const o={}; o[K.cre]=frDate(new Date()); o[K.action]=t; o[K.src]='Tête';
+  try{ await acAppend(AC_TAB_ENCOURS,[o]); toast('📥 Ajouté aux tâches à affecter'); await loadAC(); }
+  catch(e){ $('acText').value=t; toast('⚠️ '+e.message); }
+}
+$('acText').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); acAddText(); } });
+$('acCard').addEventListener('click',async function(e){
+  if(e.target.id==='acOldGo'){
+    const objs=(brain||[]).map(function(b){ const o={}; o[K.cre]=frDate(new Date()); o[K.action]=b.text; o[K.src]='Vide-tête'; if(b.tag==='Website') o[K.type]='Site internet'; if(b.tag==='Note') o[K.type]='Perso'; return o; });
+    try{ await acAppend(AC_TAB_ENCOURS,objs); brain=[]; saveJSON('td_brain',brain); try{ renderBrain(); etatPlanifierPush(); }catch(x){} toast('📥 '+objs.length+' notes envoyées'); await loadAC(); }catch(err){ toast('⚠️ '+err.message); }
+    return;
+  }
+  if(e.target.id==='acSlackNow'){ e.preventDefault();
+    const msg="Passe Slack pour mon tableau Aujourd'hui : récupère les messages Slack que j'ai marqués d'une réaction 📌 depuis la dernière passe, et ajoute chacun comme une ligne dans l'onglet « EN COURS » de ma Sheet TO DO 2026 (source : Slack, lien vers le message), sans doublon. Puis mets à jour ETAT!E1 avec l'heure de la passe.";
+    if(!sendToChat(msg)){ copyText(msg); toast('📋 Demande copiée — colle-la dans Claude'); }
+    return;
+  }
+  if(e.target.id==='acLaterBtn'){ AC_SHOWLATER=!AC_SHOWLATER; renderAC(); return; }
+  const b=e.target.closest&&e.target.closest('[data-a]'); if(!b) return;
+  const r=AC_VIEW[+b.getAttribute('data-i')]; if(!r) return;
+  const a=b.getAttribute('data-a');
+  try{
+    if(a==='cas') openCas(r);
+    else if(a==='date'){ openAgenda({action:r.action,det:r.det,lien:r.lien,values:r.values,rowIdx:r.rowIdx}); }
+    else if(a==='later'){ AC_LATER[acKey(r)]=ymd(new Date()); saveJSON('td_aclater',AC_LATER); renderAC(); toast('⏳ Rangé dans « Plus tard »'); }
+    else if(a==='unlater'){ delete AC_LATER[acKey(r)]; saveJSON('td_aclater',AC_LATER); renderAC(); }
+    else if(a==='wait') openWait(r);
+    else if(a==='proj'){
+      const t=await invEnsure();
+      const line=[r.cre||frDate(new Date()), '', r.action, '', '', '', 'En stand-by', r.det, r.lien, 'To-do'];
+      await acCheck(r);
+      await sh('POST','/values/'+a1(t.title,'A1')+':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS',{values:[line]});
+      await acDeleteRow(r); toast('🎤 Rangé dans Projets & invitations (en stand-by)'); await loadAC(); try{ loadInv(); }catch(x){}
+    }
+    else if(a==='got'){ const o={}; o[K.etat]=''; await acSetCells(r,o); toast('✓ Reçu — la tâche revient dans les tâches à affecter'); await loadAC(); }
+    else if(a==='more'){ const d=new Date(); d.setDate(d.getDate()+7); const o={}; o[K.att]=frDate(d); await acSetCells(r,o); toast('Relance repoussée au '+frDate(d)); await loadAC(); }
+  }catch(err){ if(err.message!=='ligne déplacée') toast('⚠️ '+err.message); }
+});
+$('waList').addEventListener('click',async function(e){
+  const b=e.target.closest&&e.target.closest('[data-a]'); if(!b) return;
+  const r=AC_VIEW[+b.getAttribute('data-i')]; if(!r) return;
+  const a=b.getAttribute('data-a');
+  try{
+    if(a==='got'){ const o={}; o[K.etat]=''; await acSetCells(r,o); toast('✓ Reçu — la tâche revient dans les tâches à affecter'); }
+    else if(a==='relnow'){ const o={}; o[K.att]=frDate(new Date()); await acSetCells(r,o); toast('🔔 La relance est dans les tâches à affecter'); }
+    await loadAC();
+  }catch(err){ if(err.message!=='ligne déplacée') toast('⚠️ '+err.message); }
+});
+$('waHead').addEventListener('click',function(){ WA_OPEN=!WA_OPEN; saveJSON('td_waopen',WA_OPEN); renderAC(); });
+$('acNudge').addEventListener('click',function(){ showTab('todo'); });
+
+/* ---------- ⚡ caser aujourd'hui ---------- */
+function casMark(){
+  document.querySelectorAll('#casOverlay [data-cdur]').forEach(function(b){ b.classList.toggle('on',+b.getAttribute('data-cdur')===CAS_DUR); });
+  document.querySelectorAll('#casOverlay [data-ccal]').forEach(function(b){ b.classList.toggle('on',b.getAttribute('data-ccal')===CAS_CAL); });
+}
+function casPropose(){
+  CAS_SLOT=creneauLibre(CAS_DUR);
+  const auj=ymd(CAS_SLOT)===ymd(new Date());
+  if(auj){ $('casHint').textContent='Prochain créneau libre aujourd’hui : '+hhmm(CAS_SLOT)+'.'; $('casGo').textContent='Caser à '+hhmm(CAS_SLOT); $('casForce').style.display='none'; }
+  else { $('casHint').textContent='Plus de créneau libre aujourd’hui. Je te propose demain '+hhmm(CAS_SLOT)+', ou de la caser quand même maintenant (par-dessus autre chose).'; $('casGo').textContent='Demain '+hhmm(CAS_SLOT); $('casForce').style.display='inline-block'; }
+}
+function openCas(r){
+  AC_TGT=r; $('casName').textContent=(isDue(r)?'Relancer — ':'')+r.action;
+  CAS_DUR=isDue(r)?15:30; CAS_CAL=norm(r.type)==='perso'?'perso':'pro'; casMark(); casPropose();
+  $('casOverlay').classList.add('on');
+}
+$('casOverlay').addEventListener('click',function(e){
+  if(e.target===$('casOverlay')){ $('casOverlay').classList.remove('on'); return; }
+  const d=e.target.getAttribute&&e.target.getAttribute('data-cdur'); if(d){ CAS_DUR=+d; casMark(); casPropose(); return; }
+  const c=e.target.getAttribute&&e.target.getAttribute('data-ccal'); if(c){ CAS_CAL=c; casMark(); }
+});
+$('casCancel').addEventListener('click',function(){ $('casOverlay').classList.remove('on'); });
+$('casGo').addEventListener('click',function(){ doCas(CAS_SLOT); });
+$('casForce').addEventListener('click',function(){ const p=15*60000; doCas(new Date(Math.ceil(Date.now()/p)*p)); });
+async function doCas(start){
+  const r=AC_TGT; if(!r||!start) return;
+  const due=isDue(r);
+  $('casGo').disabled=true; $('casForce').disabled=true;
+  try{
+    await acCheck(r);
+    const end=new Date(start.getTime()+CAS_DUR*60000);
+    const desc=[r.det, r.lien, '— depuis Tâches à affecter'+(r.type?(' · type : '+r.type):'')+(r.source?(' · source : '+r.source):'')].filter(function(x){ return String(x||'').trim(); }).join('\n');
+    await gfetch('POST','/calendars/'+encodeURIComponent(CAS_CAL==='perso'?CAL_PERSO:CAL_PRO)+'/events',{
+      summary:(due?'Relancer : ':'')+r.action, description:desc,
+      start:{dateTime:offISO(start),timeZone:'Europe/Paris'}, end:{dateTime:offISO(end),timeZone:'Europe/Paris'} });
+    if(due){
+      /* relance posée : si toujours rien dans 7 jours, elle revient */
+      const d=new Date(); d.setDate(d.getDate()+7); const o={}; o[K.att]=frDate(d); await acSetCells(r,o);
+    } else {
+      const obj={}; AC.H.forEach(function(h,i){ if(h) obj[h]=(r.values[i]!=null?r.values[i]:''); });
+      await acAppend(AC_TAB_AGENDA,[obj]); await acDeleteRow(r);
+    }
+    $('casOverlay').classList.remove('on');
+    toast('⚡ Casé '+(ymd(start)===ymd(new Date())?'aujourd’hui':'demain')+' à '+hhmm(start));
+    delete AC_LATER[acKey(r)]; saveJSON('td_aclater',AC_LATER);
+    await loadAC(); try{ await loadToday(true); }catch(x){} try{ loadTodo(); }catch(x){}
+  }catch(err){ if(err.message!=='ligne déplacée') toast('⚠️ '+err.message); }
+  $('casGo').disabled=false; $('casForce').disabled=false;
+}
+
+/* ---------- ⏸ en attente ---------- */
+function openWait(r){
+  AC_TGT=r; $('waName').textContent=r.action; $('waWho').value='';
+  const d=new Date(); d.setDate(d.getDate()+7); $('waDate').value=ymd(d);
+  $('waOverlay').classList.add('on'); setTimeout(function(){ try{ $('waWho').focus(); }catch(e){} },50);
+}
+$('waCancel').addEventListener('click',function(){ $('waOverlay').classList.remove('on'); });
+$('waOverlay').addEventListener('click',function(e){ if(e.target===$('waOverlay')) $('waOverlay').classList.remove('on'); });
+$('waGo').addEventListener('click',async function(){
+  const r=AC_TGT; if(!r) return;
+  const v=$('waDate').value; if(!v){ toast('Choisis une date de relance'); return; }
+  const who=($('waWho').value||'').trim();
+  const p=v.split('-'); const o={}; o[K.etat]='en attente'; o[K.att]=p[2]+'/'+p[1]+'/'+p[0];
+  if(who) o[K.det]='⏸ Attendu : '+who+(r.det&&r.det.indexOf('⏸ Attendu')<0?(' · '+r.det):'');
+  $('waGo').disabled=true;
+  try{ await acSetCells(r,o); $('waOverlay').classList.remove('on'); toast('⏸ En attente — relance le '+o[K.att]); await loadAC(); }
+  catch(err){ if(err.message!=='ligne déplacée') toast('⚠️ '+err.message); }
+  $('waGo').disabled=false;
+});
+
+/* ---------- 🔄 passe : mails 📌 Tâche ---------- */
+async function acKnownLinks(){
+  const set=[];
+  for(const t of [AC_TAB_ENCOURS,AC_TAB_AGENDA,AC_TAB_DONE]){
+    try{ const x=await acTab(t); const c=x.d.headers.indexOf(K.lien); if(c<0) continue;
+      for(let i=x.d.headerIndex+1;i<x.d.rows.length;i++){ const v=String((x.d.rows[i]||[])[c]||''); if(v) set.push(v); } }catch(e){}
+  }
+  return set.join(' ');
+}
+async function gmailPass(){
+  const r=await gm('/users/me/labels');
+  const lab=(r.labels||[]).filter(function(l){ return /📌/.test(l.name||'') && norm(l.name).indexOf('tache')>=0; })[0];
+  if(!lab) return 'Gmail : crée le libellé « 📌 Tâche » dans Gmail pour que je puisse ramasser tes mails.';
+  const lst=await gm('/users/me/messages?maxResults=30&labelIds='+encodeURIComponent(lab.id));
+  const msgs=lst.messages||[]; if(!msgs.length) return 'Gmail : aucun mail marqué 📌 Tâche.';
+  const known=await acKnownLinks(); const seen={}; const objs=[];
+  for(const m of msgs){
+    if(seen[m.threadId] || known.indexOf(m.threadId)>=0) continue; seen[m.threadId]=1;
+    try{
+      const d=await gm('/users/me/messages/'+m.id+'?format=metadata&metadataHeaders=Subject&metadataHeaders=From');
+      const h={}; ((d.payload&&d.payload.headers)||[]).forEach(function(x){ h[String(x.name).toLowerCase()]=x.value; });
+      const o={}; o[K.cre]=frDate(new Date()); o[K.action]='Mail — '+(h.subject||'(sans objet)'); o[K.det]='De : '+cleanFrom(h.from);
+      o[K.lien]='https://mail.google.com/mail/u/0/#all/'+m.threadId; o[K.src]='Gmail'; objs.push(o);
+    }catch(e){}
+  }
+  if(objs.length) await acAppend(AC_TAB_ENCOURS,objs);
+  return 'Gmail : '+(objs.length?(objs.length+' nouveau'+(objs.length>1?'x':'')+' mail'+(objs.length>1?'s':'')+' ajouté'+(objs.length>1?'s':'')):'rien de nouveau')+'.';
+}
+$('acPass').addEventListener('click',async function(){
+  const b=$('acPass'); b.disabled=true; b.textContent='⏳ Passe…';
+  let msg='';
+  try{ msg=await gmailPass(); }catch(e){ msg='Gmail : '+e.message; }
+  await loadAC();
+  const last=AC_SLACK?new Date(AC_SLACK):null;
+  if(!last||isNaN(last)||(Date.now()-last.getTime())>2*3600000){
+    const req="Passe partout pour mon tableau Aujourd'hui : lance maintenant la passe Slack + Gmail 📌 (même consigne que la passe automatique de 12h10 / 17h10).";
+    if(!sendToChat(req)){ copyText(req); }
+    msg+=' Slack : demande copiée — colle-la dans Claude (Cmd+V).';
+  } else { msg+=' Slack : déjà passé à '+hhmm(last)+'.'; }
+  toast(msg); b.disabled=false; b.textContent='🔄 Passe partout';
+});
+
+/* ---------- ✅ validation → Tâches réalisées ---------- */
+function valLogged(){ return loadJSON('td_logged',{}); }
+function valMark(ev){ const l=valLogged(); l[ev.id+'|'+ymd(new Date())]=1; saveJSON('td_logged',l); }
+function valGuess(ev){
+  const m=plainDesc(ev).match(/type\s*:\s*([^·\n]+)/i); if(m){ const t=m[1].trim(); const f=AC_TYPES.filter(function(x){ return norm(x)===norm(t); })[0]; if(f) return f; }
+  const s=norm(displayTitle(ev));
+  if(/script|video|tourn|mont|carrousel|carousel|reel|story|descri|publi/.test(s)) return 'Création de contenu';
+  if(/site|courrier|article|vercel|github/.test(s)) return 'Site internet';
+  if(/collab|devis|brief|marque|contrat/.test(s)) return 'Collabs';
+  if(/formation|dila/.test(s)) return 'Formation';
+  if(/interview|itw|media|podcast|radio/.test(s)) return 'Médias';
+  return 'Admin';
+}
+function valMinutes(ev){ try{ return Math.round((typeof ecoule==='function'?ecoule(ev.id):(TIMER.passe[ev.id]||0))/60); }catch(e){ return 0; } }
+async function valWrite(ev,type,proj){
+  const o={}; const c=ev.created?new Date(ev.created):null;
+  o[K.cre]=c&&!isNaN(c)?frDate(c):''; o[K.type]=type; o[K.action]=displayTitle(ev); o[K.etat]='Terminé';
+  o[K.real]=frDate(new Date()); o[K.temps]=valMinutes(ev); o[K.proj]=proj||'';
+  try{ o[K.lien]=extractLinks(ev,false).map(function(l){ return l.url; }).join(' '); }catch(e){}
+  await acAppend(AC_TAB_DONE,[o]); valMark(ev);
+}
+function casLogDone(ev){
+  if(valLogged()[ev.id+'|'+ymd(new Date())]) return;
+  if(estPerso(ev)){ valWrite(ev,'Perso','').catch(function(e){ toast('⚠️ Tâches réalisées : '+e.message); }); return; }
+  VAL_EV=ev; VAL_TYPE=valGuess(ev);
+  $('valName').textContent=displayTitle(ev);
+  $('valTime').textContent='Temps passé : '+valMinutes(ev)+' min';
+  $('valTypes').innerHTML=AC_TYPES.filter(function(t){ return t!=='Perso'; }).map(function(t){ return '<button class="typechip'+(t===VAL_TYPE?' on':'')+'" data-vt="'+esc(t)+'">'+esc(t)+'</button>'; }).join('');
+  $('valProj').value='';
+  $('valOverlay').classList.add('on');
+}
+$('valTypes').addEventListener('click',function(e){ const t=e.target.getAttribute&&e.target.getAttribute('data-vt'); if(!t) return; VAL_TYPE=t; document.querySelectorAll('#valTypes .typechip').forEach(function(b){ b.classList.toggle('on',b.getAttribute('data-vt')===t); }); });
+$('valSkip').addEventListener('click',function(){ if(VAL_EV) valMark(VAL_EV); $('valOverlay').classList.remove('on'); });
+$('valGo').addEventListener('click',async function(){
+  if(!VAL_EV) return; $('valGo').disabled=true;
+  try{ await valWrite(VAL_EV,VAL_TYPE,($('valProj').value||'').trim()); $('valOverlay').classList.remove('on'); toast('📒 Rangé dans « Tâches réalisées »'); }
+  catch(e){ toast('⚠️ '+e.message); }
+  $('valGo').disabled=false;
+});
+$('valProj').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); $('valGo').click(); } });
+
+
+/* =====================================================================
+   🎤 PROJETS & INVITATIONS — ajouté le 19/11/2026
+   Les interviews, événements, propositions de projets : pas des tâches,
+   mais des choses à garder en vue. Stockées dans l'onglet
+   « PROJETS & INVITATIONS » de TO DO 2026 (créé tout seul au besoin).
+   ===================================================================== */
+const INV_TAB='PROJETS & INVITATIONS';
+const INV_HEAD=['AJOUTE LE','TYPE','QUOI','DE QUI','DATE','REPONDRE AVANT','STATUT','NOTE','LIEN','SOURCE'];
+const IK={ add:0, type:1, quoi:2, qui:3, date:4, rep:5, st:6, note:7, lien:8, src:9 };
+const INV_TYPES=[['Interview','🎤'],['Événement','📅'],['Projet','🤝'],['Autre','✨']];
+const INV_ST=['À regarder','Intéressée','Acceptée','En stand-by','Refusée','Passée'];
+let INV={tab:null,rows:[]}, INV_OPEN={}, INV_ARCH=false, INV_EDIT=null, INV_TYPE='Événement', SUB=loadJSON('td_sub','tasks');
+
+function invEmoji(t){ const f=INV_TYPES.filter(function(x){ return norm(x[0])===norm(t); })[0]; return f?f[1]:'✨'; }
+function invArchived(r){ const s=norm(r.st); return s==='refusee'||s==='passee'; }
+function dIn(v){ const p=String(v||'').split('-'); return p.length===3?(p[2]+'/'+p[1]+'/'+p[0]):''; }
+function dOut(s){ const d=parseFr(s); return d?ymd(d):''; }
+function dNice(s){ const d=parseFr(s); return d?d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'}):''; }
+
+async function invEnsure(){
+  await sheetMeta();
+  let t=findTab(INV_TAB,null,null);
+  if(!t){
+    await sh('POST',':batchUpdate',{requests:[{addSheet:{properties:{title:INV_TAB}}}]});
+    SHEET_META=null; await sheetMeta(); t=findTab(INV_TAB,null,null);
+    await sh('PUT','/values/'+a1(INV_TAB,'A1')+'?valueInputOption=RAW',{values:[INV_HEAD]});
+  }
+  return t;
+}
+async function loadInv(){
+  try{
+    const t=await invEnsure(); INV.tab=t;
+    const r=await sh('GET','/values/'+a1(t.title,'A1:J400'));
+    const rows=r.values||[]; INV.rows=[];
+    for(let i=1;i<rows.length;i++){
+      const v=rows[i]||[]; const q=String(v[IK.quoi]||'').trim(); if(!q) continue;
+      INV.rows.push({rowIdx:i, add:v[IK.add]||'', type:v[IK.type]||'', quoi:q, qui:v[IK.qui]||'', date:v[IK.date]||'',
+        rep:v[IK.rep]||'', st:v[IK.st]||'À regarder', note:v[IK.note]||'', lien:String(v[IK.lien]||'').trim(), src:v[IK.src]||''});
+    }
+    renderInv();
+  }catch(e){ $('invList').innerHTML='<div class="empty">⚠️ Sheet : '+esc(e.message)+'</div>'; }
+}
+function invSortKey(r){ const a=parseFr(r.rep), b=parseFr(r.date); const x=[a,b].filter(Boolean).sort(function(p,q){ return p-q; })[0]; return x?x.getTime():9e15; }
+function invItem(r,i){
+  const open=!!INV_OPEN[r.rowIdx];
+  const soon=(function(){ const d=parseFr(r.rep); if(!d) return false; return (d-new Date())<3*86400000; })();
+  const past=(function(){ const d=parseFr(r.date); if(!d) return false; const t=new Date(); t.setHours(0,0,0,0); return d<t; })();
+  const head='<div class="invhead" data-inv="'+i+'"><span class="invico">🎤</span><span class="invq">'+esc(r.quoi)+'</span>'
+    +(r.date?'<span class="invdate'+(past?' past':'')+'">'+esc(dNice(r.date))+'</span>':'')
+    +(r.rep?'<span class="invrep'+(soon?' soon':'')+'">répondre av. '+esc(dNice(r.rep))+'</span>':'')
+    +'<span class="invst">'+esc(r.st)+'</span><span class="invcaret">'+(open?'▴':'▾')+'</span></div>';
+  if(!open) return '<div class="inv">'+head+'</div>';
+  const link=/^https?:\/\//i.test(r.lien)?'<div class="links"><a class="lnk" target="_blank" rel="noopener" href="'+esc(r.lien)+'">'+iconFor(r.lien)+' '+esc(labelFor(r.lien))+'</a></div>':(r.lien?'<div class="tdm">📎 '+esc(r.lien)+'</div>':'');
+  const body='<div class="invbody">'
+    +'<div class="tdm">'+esc([r.qui?('de '+r.qui):'', r.date?('le '+r.date):'', r.rep?('répondre avant le '+r.rep):'', r.add?('ajouté le '+r.add):''].filter(Boolean).join(' · '))+'</div>'
+    +(r.note?'<div class="invnote">'+esc(r.note).replace(/\n/g,'<br>')+'</div>':'')+link
+    +'<div class="tags" style="margin-top:8px">'+INV_ST.map(function(s){ return '<button class="typechip'+(norm(s)===norm(r.st)?' on':'')+'" data-ist="'+esc(s)+'" data-i="'+i+'">'+esc(s)+'</button>'; }).join('')+'</div>'
+    +'<div class="acacts" style="max-width:none;justify-content:flex-start;margin-top:4px"><button class="acbtn go" data-ia="task" data-i="'+i+'">⚡ En faire une tâche</button><button class="acbtn" data-ia="edit" data-i="'+i+'">✏️ Modifier</button></div>'
+    +'</div>';
+  return '<div class="inv open">'+head+body+'</div>';
+}
+let INV_VIEW=[];
+function renderInv(){
+  const act=INV.rows.filter(function(r){ return !invArchived(r); }).sort(function(a,b){ return invSortKey(a)-invSortKey(b); });
+  const arch=INV.rows.filter(invArchived);
+  INV_VIEW=[];
+  setBadge('c-inv',act.length);
+  $('invList').innerHTML=act.length?act.map(function(r){ INV_VIEW.push(r); return invItem(r,INV_VIEW.length-1); }).join(''):'<div class="empty">Aucune invitation en cours.</div>';
+  $('invArch').innerHTML=arch.length?('<button class="morebtn" id="invArchBtn">'+(INV_ARCH?'▴':'▾')+' Refusées / passées ('+arch.length+')</button>'
+    +(INV_ARCH?arch.map(function(r){ INV_VIEW.push(r); return invItem(r,INV_VIEW.length-1); }).join(''):'')):'';
+}
+/* ajout / modification */
+function invMark(){ document.querySelectorAll('#invOverlay [data-ity]').forEach(function(b){ b.classList.toggle('on',b.getAttribute('data-ity')===INV_TYPE); }); }
+function openInv(r,titre){
+  INV_EDIT=r||null;
+  $('invTitle').textContent=r?'✏️ Modifier':'🎤 Nouveau projet / invitation';
+  $('invQuoi').value=r?r.quoi:(titre||''); $('invQui').value=r?r.qui:''; $('invDate').value=r?dOut(r.date):'';
+  $('invRep').value=r?dOut(r.rep):''; $('invLien').value=r?r.lien:''; $('invNote').value=r?r.note:'';
+  $('invOverlay').classList.add('on'); setTimeout(function(){ try{ (r?$('invNote'):$('invQui')).focus(); }catch(e){} },50);
+}
+$('invOverlay').addEventListener('click',function(e){
+  if(e.target===$('invOverlay')){ $('invOverlay').classList.remove('on'); return; }
+});
+$('invCancel').addEventListener('click',function(){ $('invOverlay').classList.remove('on'); });
+$('invGo').addEventListener('click',async function(){
+  const q=($('invQuoi').value||'').trim(); if(!q){ toast('Donne un titre'); return; }
+  const r=INV_EDIT;
+  const line=[ r?r.add:frDate(new Date()), r?r.type:'', q, ($('invQui').value||'').trim(), dIn($('invDate').value), dIn($('invRep').value),
+               r?r.st:'À regarder', ($('invNote').value||'').trim(), ($('invLien').value||'').trim(), r?r.src:'Tableau' ];
+  $('invGo').disabled=true;
+  try{
+    const t=await invEnsure();
+    if(r){
+      const chk=await sh('GET','/values/'+a1(t.title,'C'+(r.rowIdx+1)));
+      if(norm(((chk.values||[[]])[0]||[])[0]||'')!==norm(r.quoi)){ toast('La Sheet a bougé, je recharge — réessaie'); await loadInv(); throw new Error('ligne déplacée'); }
+      await sh('PUT','/values/'+a1(t.title,'A'+(r.rowIdx+1)+':J'+(r.rowIdx+1))+'?valueInputOption=USER_ENTERED',{values:[line]});
+    } else {
+      await sh('POST','/values/'+a1(t.title,'A1')+':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS',{values:[line]});
+    }
+    $('invOverlay').classList.remove('on'); $('invText').value=''; toast(r?'✏️ Modifié':'🎤 Ajouté');
+    await loadInv();
+  }catch(e){ if(e.message!=='ligne déplacée') toast('⚠️ '+e.message); }
+  $('invGo').disabled=false;
+});
+$('invText').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); openInv(null,($('invText').value||'').trim()); } });
+$('invAddBtn').addEventListener('click',function(){ openInv(null,($('invText').value||'').trim()); });
+/* clics dans la liste */
+$('invCard').addEventListener('click',async function(e){
+  if(e.target.id==='invArchBtn'){ INV_ARCH=!INV_ARCH; renderInv(); return; }
+  const st=e.target.getAttribute&&e.target.getAttribute('data-ist');
+  if(st){ const r=INV_VIEW[+e.target.getAttribute('data-i')]; if(!r) return;
+    try{ const t=await invEnsure();
+      const chk=await sh('GET','/values/'+a1(t.title,'C'+(r.rowIdx+1)));
+      if(norm(((chk.values||[[]])[0]||[])[0]||'')!==norm(r.quoi)){ toast('La Sheet a bougé, je recharge'); await loadInv(); return; }
+      await sh('PUT','/values/'+a1(t.title,'G'+(r.rowIdx+1))+'?valueInputOption=RAW',{values:[[st]]});
+      r.st=st; renderInv(); toast('Statut : '+st);
+    }catch(err){ toast('⚠️ '+err.message); }
+    return; }
+  const b=e.target.closest&&e.target.closest('[data-ia]');
+  if(b){ const r=INV_VIEW[+b.getAttribute('data-i')]; if(!r) return;
+    if(b.getAttribute('data-ia')==='edit'){ openInv(r); return; }
+    if(b.getAttribute('data-ia')==='task'){
+      const o={}; o[K.cre]=frDate(new Date()); o[K.action]=(norm(r.st)==='acceptee'?'Préparer — ':'Répondre — ')+r.quoi+(r.qui?(' ('+r.qui+')'):'');
+      o[K.lien]=r.lien; o[K.det]=r.note; o[K.src]='Invitation';
+      try{ await acAppend(AC_TAB_ENCOURS,[o]); toast('⚡ Ajouté aux tâches à affecter'); await loadAC(); }catch(err){ toast('⚠️ '+err.message); }
+    }
+    return; }
+  const h=e.target.closest&&e.target.closest('[data-inv]');
+  if(h){ const r=INV_VIEW[+h.getAttribute('data-inv')]; if(!r) return; INV_OPEN[r.rowIdx]=!INV_OPEN[r.rowIdx]; renderInv(); }
+});
+/* sous-onglets */
+function showSub(s){ SUB=s; saveJSON('td_sub',s);
+  document.querySelectorAll('.subtab').forEach(function(b){ b.classList.toggle('on',b.getAttribute('data-sub')===s); });
+  $('subTasks').style.display=s==='tasks'?'block':'none'; $('subInv').style.display=s==='inv'?'block':'none'; }
+document.querySelectorAll('.subtab').forEach(function(b){ b.addEventListener('click',function(){ showSub(b.getAttribute('data-sub')); }); });
+showSub(SUB);
+
 </script>
 </body>
 </html>
