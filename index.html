@@ -439,7 +439,8 @@
         <button class="btn btn-primary" id="closeDay">🌙 Clôturer ma journée — reporter les non-faits à demain</button>
       </div>
 
-      <div class="acnudge" id="acNudge"></div>
+      <div class="section-title sante-head" id="acTodayHead" role="button" tabindex="0"><span class="sante-caret">▶</span>📥 Tâches à affecter <span class="count" id="c-actoday">0</span></div>
+      <div class="card" id="acToday" style="display:none"></div>
       <div class="section-title sante-head" id="brainHead" role="button" tabindex="0" style="display:none"><span class="sante-caret">▶</span>🧠 Vide-tête <span class="count" id="c-brain">0</span></div>
       <div class="card" id="brainCard" style="display:none">
         <div class="bd-input"><input id="bdText" placeholder="Un truc qui te passe par la tête…" autocomplete="off"></div>
@@ -620,7 +621,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-11-19-4';
+const VERSION='2026-11-19-5';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -2597,7 +2598,7 @@ const K={ cre:norm('DATE CREATION'), type:norm('TYPE'), prio:norm('PRIORITE'), p
           det:norm('DETAILS'), src:norm('SOURCE'), temps:norm('TEMPS PASSE (MIN)'), proj:norm('PROJET / CLIENT') };
 let AC={tab:null,H:[],rows:[]}, AC_VIEW=[], AC_LATER=loadJSON('td_aclater',{}), AC_SHOWLATER=false,
     AC_TGT=null, CAS_DUR=30, CAS_CAL='pro', CAS_SLOT=null, AC_SLACK='', VAL_EV=null, VAL_TYPE='';
-let WA_OPEN=loadJSON('td_waopen',false);
+let WA_OPEN=loadJSON('td_waopen',false), AC_TODAY_OPEN=loadJSON('td_actodayopen',false);
 
 function frDate(d){ return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear(); }
 function parseFr(s){ const m=String(s||'').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m?new Date(+m[3],+m[2]-1,+m[1]):null; }
@@ -2702,9 +2703,11 @@ function renderAC(){
   else st+='Slack : pas encore de passe. ';
   st+='<a href="#" id="acSlackNow">Demander une passe Slack à Claude</a>';
   $('acStatus').innerHTML=st;
-  /* rappel sur l'écran Aujourd'hui */
-  const nud=$('acNudge');
-  if(nud){ nud.style.display=now.length?'block':'none'; nud.textContent='📥 '+now.length+' tâche'+(now.length>1?'s':'')+' à affecter'+(dueN?(' — dont 🔔 '+dueN+' relance'+(dueN>1?'s':'')):'')+' →'; }
+  /* même liste, en déroulant, sur l'écran Aujourd'hui */
+  $('c-actoday').textContent=now.length+(dueN?(' · 🔔 '+dueN):'');
+  $('acTodayHead').classList.toggle('open',AC_TODAY_OPEN);
+  $('acToday').style.display=AC_TODAY_OPEN?'block':'none';
+  $('acToday').innerHTML=$('acList').innerHTML;
 }
 
 /* ---------- ajout depuis ta tête ---------- */
@@ -2716,7 +2719,7 @@ async function acAddText(){
   catch(e){ $('acText').value=t; toast('⚠️ '+e.message); }
 }
 $('acText').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); acAddText(); } });
-$('acCard').addEventListener('click',async function(e){
+async function acClick(e){
   if(e.target.id==='acOldGo'){
     const objs=(brain||[]).map(function(b){ const o={}; o[K.cre]=frDate(new Date()); o[K.action]=b.text; o[K.src]='Vide-tête'; if(b.tag==='Website') o[K.type]='Site internet'; if(b.tag==='Note') o[K.type]='Perso'; return o; });
     try{ await acAppend(AC_TAB_ENCOURS,objs); brain=[]; saveJSON('td_brain',brain); try{ renderBrain(); etatPlanifierPush(); }catch(x){} toast('📥 '+objs.length+' notes envoyées'); await loadAC(); }catch(err){ toast('⚠️ '+err.message); }
@@ -2747,7 +2750,10 @@ $('acCard').addEventListener('click',async function(e){
     else if(a==='got'){ const o={}; o[K.etat]=''; await acSetCells(r,o); toast('✓ Reçu — la tâche revient dans les tâches à affecter'); await loadAC(); }
     else if(a==='more'){ const d=new Date(); d.setDate(d.getDate()+7); const o={}; o[K.att]=frDate(d); await acSetCells(r,o); toast('Relance repoussée au '+frDate(d)); await loadAC(); }
   }catch(err){ if(err.message!=='ligne déplacée') toast('⚠️ '+err.message); }
-});
+}
+$('acCard').addEventListener('click',acClick);
+$('acToday').addEventListener('click',acClick);
+$('acTodayHead').addEventListener('click',function(){ AC_TODAY_OPEN=!AC_TODAY_OPEN; saveJSON('td_actodayopen',AC_TODAY_OPEN); $('acTodayHead').classList.toggle('open',AC_TODAY_OPEN); $('acToday').style.display=AC_TODAY_OPEN?'block':'none'; });
 $('waList').addEventListener('click',async function(e){
   const b=e.target.closest&&e.target.closest('[data-a]'); if(!b) return;
   const r=AC_VIEW[+b.getAttribute('data-i')]; if(!r) return;
@@ -2759,7 +2765,6 @@ $('waList').addEventListener('click',async function(e){
   }catch(err){ if(err.message!=='ligne déplacée') toast('⚠️ '+err.message); }
 });
 $('waHead').addEventListener('click',function(){ WA_OPEN=!WA_OPEN; saveJSON('td_waopen',WA_OPEN); renderAC(); });
-$('acNudge').addEventListener('click',function(){ showTab('todo'); });
 
 /* ---------- ⚡ caser aujourd'hui ---------- */
 function casMark(){
