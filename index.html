@@ -365,7 +365,7 @@
   .ws-chip{ font-size:10.5px; font-weight:700; border-radius:10px; padding:2px 8px; background:#f1efe9; color:#8a8375; }
   .ws-chip.who{ background:#f1eef9; color:#5f4fa0; }
   .ws-chip.urg{ background:#fdeceb; color:#b5443a; }
-  .ws-chip.s-done{ background:#eef5ea; color:#4d7b40; } .ws-chip.s-wait{ background:#fbf1e4; color:#a5683a; } .ws-chip.s-doing{ background:#eef3f9; color:#3b6ea5; }
+  .ws-chip.s-done{ background:#eef5ea; color:#4d7b40; } .ws-chip.s-wait{ background:#fbf1e4; color:#a5683a; } .ws-chip.s-doing{ background:#eef3f9; color:#3b6ea5; } .ws-chip.s-branch{ background:#f1eef9; color:#5f4fa0; }
   .ws-td{ display:none; padding:0 16px 12px 37px; }
   .ws-task.x .ws-td{ display:block; }
   .ws-det{ white-space:pre-wrap; background:#faf8f3; border-radius:10px; padding:9px 11px; font-size:13px; color:#4a4438; margin-bottom:8px; }
@@ -2420,11 +2420,11 @@ const WS_STEPS=[
   {k:'SITE A AMELIORER',n:'4 · Améliorations',d:'pour plus tard'},
   {k:'',n:'À classer',d:'lignes sans étape dans la Sheet'}
 ];
-const WS_ST={done:'Terminé',doing:'En cours',wait:'en attente',todo:'Pas commencé'};
-const WS_STL={done:'Fait',doing:'En cours',wait:'En attente',todo:'Pas commencé'};
+const WS_ST={done:'Terminé',doing:'En cours',wait:'en attente',branch:'Dans branche à valider',todo:'Pas commencé'};
+const WS_STL={done:'Fait',doing:'En cours',wait:'En attente',branch:'Branche à valider',todo:'Pas commencé'};
 let WS=[], wsView=loadJSON('td_wsview','etape'), wsFilt='all', wsOpen=new Set(['MAINTENANT']), wsOpenT=new Set(), wsMsg={}, wsWinsOpen=false;
 
-function wsStatus(s){ s=norm(s); if(s==='termine') return 'done'; if(s==='en cours') return 'doing'; if(s==='en attente') return 'wait'; return 'todo'; }
+function wsStatus(s){ s=norm(s); if(s==='termine') return 'done'; if(s==='en cours') return 'doing'; if(s==='en attente') return 'wait'; if(s.indexOf('branche')>=0) return 'branch'; return 'todo'; }
 function wsMine(t){ const w=norm(t.who); return w===''||w==='ines'; }
 function wsPrio(p){ const n=norm(p); return n.indexOf('tres urgent')>=0?0:(n.indexOf('urgent')>=0?1:(n.indexOf('moder')>=0?2:(n.indexOf('faible')>=0?3:4))); }
 function wsDate(s){ const m=String(s||'').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); return m?new Date(+m[3],+m[2]-1,+m[1]).getTime():0; }
@@ -2451,15 +2451,18 @@ async function loadSite(){
 }
 function wsPass(t){
   if(wsFilt==='done') return t.st==='done';
+  if(wsFilt==='branch') return t.st==='branch';
   if(wsFilt==='mine') return t.st!=='done'&&wsMine(t);
   if(wsFilt==='others') return t.st!=='done'&&!wsMine(t);
   return true;
 }
-function wsSort(a,b){ const o={doing:0,todo:1,wait:2,done:3}; return (o[a.st]-o[b.st])||(wsPrio(a.prio)-wsPrio(b.prio))||(a.row-b.row); }
-function wsRing(pct,size,stroke,fs){
+function wsSort(a,b){ const o={doing:0,todo:1,branch:2,wait:3,done:4}; return (o[a.st]-o[b.st])||(wsPrio(a.prio)-wsPrio(b.prio))||(a.row-b.row); }
+function wsRing(pct,size,stroke,fs,pct2){
   const r=(size-stroke)/2,c=2*Math.PI*r,off=c*(1-pct/100),h=size/2;
+  const off2=c*(1-(pct2||0)/100);
   return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'" aria-hidden="true">'
     +'<circle cx="'+h+'" cy="'+h+'" r="'+r+'" fill="none" stroke="#ece6f6" stroke-width="'+stroke+'"/>'
+    +((pct2&&pct2>pct)?'<circle cx="'+h+'" cy="'+h+'" r="'+r+'" fill="none" stroke="#cfc3ee" stroke-width="'+stroke+'" stroke-linecap="round" stroke-dasharray="'+c+'" stroke-dashoffset="'+off2+'" transform="rotate(-90 '+h+' '+h+')"/>':'')
     +'<circle cx="'+h+'" cy="'+h+'" r="'+r+'" fill="none" stroke="#8b7bc8" stroke-width="'+stroke+'" stroke-linecap="round" stroke-dasharray="'+c+'" stroke-dashoffset="'+off+'" transform="rotate(-90 '+h+' '+h+')"/>'
     +'<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-size="'+fs+'" font-weight="700" fill="#26231e">'+pct+'%</text></svg>';
 }
@@ -2473,13 +2476,15 @@ function wsGroups(){
 function renderSite(){
   const launch=WS.filter(t=>t.step==='MAINTENANT'||t.step==='SITE PRET');
   const ld=launch.filter(t=>t.st==='done').length, pct=launch.length?Math.round(ld/launch.length*100):0;
+  const lb=launch.filter(t=>t.st==='branch').length, pct2=launch.length?Math.round((ld+lb)/launch.length*100):pct;
   const active=WS.filter(t=>t.step!==''||t.st!=='done');
   const nMine=active.filter(t=>t.st!=='done'&&wsMine(t)).length, nOth=active.filter(t=>t.st!=='done'&&!wsMine(t)).length;
   setBadge('c-site',pct+'%');
   const nx=WS.filter(t=>wsMine(t)&&t.st!=='done'&&t.st!=='wait'&&(t.step==='MAINTENANT'||t.step==='SITE PRET'))
     .sort((a,b)=>((a.step==='MAINTENANT'?0:1)-(b.step==='MAINTENANT'?0:1))||wsSort(a,b))[0];
-  let h='<div class="card"><div class="ws-top"><div class="ws-gauge">'+wsRing(pct,130,13,26)
-    +'<div class="gl">prêt pour le lancement<br>'+ld+' / '+launch.length+' tâches (étapes 1 et 2)</div></div>'
+  let h='<div class="card"><div class="ws-top"><div class="ws-gauge">'+wsRing(pct,130,13,26,pct2)
+    +'<div class="gl">prêt pour le lancement<br>'+ld+' / '+launch.length+' tâches (étapes 1 et 2)'
+    +(lb?'<br><b style="color:#5f4fa0">+'+lb+' en branche → '+pct2+' % une fois fusionné</b>':'')+'</div></div>'
     +'<div class="ws-stats">'
     +'<div class="ws-stat" style="background:#eef5ea" data-wsf="done"><b>'+WS.filter(t=>t.st==='done').length+'</b><span>tâches faites</span></div>'
     +'<div class="ws-stat" style="background:#f1eef9" data-wsf="mine"><b>'+nMine+'</b><span>à faire par moi</span></div>'
@@ -2489,16 +2494,17 @@ function renderSite(){
     +'<div class="ws-bar"><div class="ws-seg">'
     +['etape:Par étape','pers:Par personne'].map(x=>{const k=x.split(':');return '<button data-wsv="'+k[0]+'" class="'+(wsView===k[0]?'on':'')+'">'+k[1]+'</button>';}).join('')
     +'</div><div class="ws-seg">'
-    +['all:Tout','mine:Mes tâches','others:J’attends','done:Fait'].map(x=>{const k=x.split(':');return '<button data-wsf="'+k[0]+'" class="'+(wsFilt===k[0]?'on':'')+'">'+k[1]+'</button>';}).join('')
+    +['all:Tout','mine:Mes tâches','others:J’attends','branch:Branches','done:Fait'].map(x=>{const k=x.split(':');return '<button data-wsf="'+k[0]+'" class="'+(wsFilt===k[0]?'on':'')+'">'+k[1]+'</button>';}).join('')
     +'</div></div></div>';
   wsGroups().forEach(function(g){
     const all=g.items; if(!all.length) return;
     const done=all.filter(t=>t.st==='done').length, p=Math.round(done/all.length*100);
+    const brn=all.filter(t=>t.st==='branch').length, p2=Math.round((done+brn)/all.length*100);
     const mine=all.filter(t=>t.st!=='done'&&wsMine(t)).length, oth=all.filter(t=>t.st!=='done'&&!wsMine(t)).length;
     const vis=all.filter(wsPass).sort(wsSort);
-    const sub=[done+'/'+all.length+' faites',mine?mine+' pour moi':'',oth?oth+' chez les autres':''].filter(Boolean).join(' · ');
+    const sub=[done+'/'+all.length+' faites',brn?brn+' en branche':'',mine?mine+' pour moi':'',oth?oth+' chez les autres':''].filter(Boolean).join(' · ');
     h+='<div class="card ws-sec'+(wsOpen.has(g.key)?' open':'')+'" data-wssec="'+esc(g.key)+'">'
-      +'<div class="ws-sh">'+wsRing(p,42,5,10.5)+'<div class="t"><b>'+esc(g.name)+'</b><span>'+esc(g.desc)+' — '+sub+'</span><div class="ws-prog"><i style="width:'+p+'%"></i></div></div><span class="ws-car">▸</span></div>'
+      +'<div class="ws-sh">'+wsRing(p,42,5,10.5,p2)+'<div class="t"><b>'+esc(g.name)+'</b><span>'+esc(g.desc)+' — '+sub+'</span><div class="ws-prog"><i style="width:'+p+'%"></i></div></div><span class="ws-car">▸</span></div>'
       +'<div class="ws-body">'+(vis.length?vis.map(wsTask).join(''):'<div class="empty" style="padding:10px 16px">Rien avec ce filtre.</div>')+'</div></div>';
   });
   const wins=WS.filter(t=>t.st==='done').sort((a,b)=>wsDate(b.doneAt)-wsDate(a.doneAt));
@@ -2519,7 +2525,7 @@ function wsTask(t){
     +'<div class="ws-th"><span class="ws-dot"></span><div class="ws-tt">'+esc(t.title)+'<div class="ws-chips">'+ch.join('')+'</div></div><a class="ws-sheet" href="'+url+'" target="_blank" rel="noopener">Sheet ↗</a></div>'
     +'<div class="ws-td">'+(t.det?'<div class="ws-det">'+esc(t.det)+'</div>':'<div class="ws-det" style="color:#a49c8c">Pas de détail dans la Sheet.</div>')
     +link+'<div class="ws-meta">'+esc(meta)+(meta?' · ':'')+'<a class="ws-sheetl" href="'+url+'" target="_blank" rel="noopener">Ouvrir la ligne '+t.row+' dans la Sheet ↗</a></div>'
-    +'<div class="ws-acts">'+['todo','doing','wait','done'].map(s=>'<button data-wsset="'+s+'" class="'+(t.st===s?'cur':'')+'">'+WS_STL[s]+'</button>').join('')+'</div>'
+    +'<div class="ws-acts">'+['todo','doing','wait','branch','done'].map(s=>'<button data-wsset="'+s+'" class="'+(t.st===s?'cur':'')+'">'+WS_STL[s]+'</button>').join('')+'</div>'
     +(m?'<div class="ws-msg'+(m.charAt(0)==='!'?' err':'')+'">'+esc(m.replace(/^!/,''))+'</div>':'')
     +'</div></div>';
 }
