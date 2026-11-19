@@ -362,6 +362,11 @@
   .ws-wait .ws-dot{ border-color:#c08a2e; background:#fbf1e4; }
   .ws-doing .ws-dot{ border-color:#3b6ea5; background:#3b6ea5; }
   .ws-done .ws-tt{ text-decoration:line-through; color:#a49c8c; }
+  .ws-done .ws-chips, .ws-branch .ws-chips{ text-decoration:none; }
+  .ws-task.ws-branch{ background:#fbfaf7; }
+  .ws-branch .ws-tt{ color:#9d9687; }
+  .ws-branch .ws-dot{ border-color:#b3a4e0; background:#e9e2f9; }
+  .ws-branch .ws-chip.who, .ws-branch .ws-chip.urg{ opacity:.55; }
   .ws-tt{ flex:1; min-width:0; font-size:14px; font-weight:600; color:#26231e; }
   .ws-chips{ display:flex; gap:5px; flex-wrap:wrap; margin-top:3px; }
   .ws-chip{ font-size:10.5px; font-weight:700; border-radius:10px; padding:2px 8px; background:#f1efe9; color:#8a8375; }
@@ -2465,15 +2470,17 @@ function wsPass(t){
   if(wsFilt==='others') return t.st!=='done'&&!wsMine(t);
   return true;
 }
-function wsSort(a,b){ const o={doing:0,todo:1,branch:2,wait:3,done:4}; return (o[a.st]-o[b.st])||(wsPrio(a.prio)-wsPrio(b.prio))||(a.row-b.row); }
-function wsRing(pct,size,stroke,fs,pct2){
+function wsStepIdx(t){ const i=WS_STEPS.findIndex(x=>x.k===t.step); return i<0?99:i; }
+function wsSort(a,b){ const o={doing:0,todo:1,branch:2,wait:3,done:4}; return (wsView==='pers'?(wsStepIdx(a)-wsStepIdx(b)):0)||(o[a.st]-o[b.st])||(wsPrio(a.prio)-wsPrio(b.prio))||(a.row-b.row); }
+function wsRing(pct,size,stroke,fs,pct2,sub){
   const r=(size-stroke)/2,c=2*Math.PI*r,off=c*(1-pct/100),h=size/2;
   const off2=c*(1-(pct2||0)/100);
   return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'" aria-hidden="true">'
     +'<circle cx="'+h+'" cy="'+h+'" r="'+r+'" fill="none" stroke="#ece6f6" stroke-width="'+stroke+'"/>'
-    +((pct2&&pct2>pct)?'<circle cx="'+h+'" cy="'+h+'" r="'+r+'" fill="none" stroke="#cfc3ee" stroke-width="'+stroke+'" stroke-linecap="round" stroke-dasharray="'+c+'" stroke-dashoffset="'+off2+'" transform="rotate(-90 '+h+' '+h+')"/>':'')
+    +((pct2&&pct2>pct)?'<circle cx="'+h+'" cy="'+h+'" r="'+r+'" fill="none" stroke="#bda9f0" stroke-width="'+stroke+'" stroke-linecap="round" stroke-dasharray="'+c+'" stroke-dashoffset="'+off2+'" transform="rotate(-90 '+h+' '+h+')"/>':'')
     +'<circle cx="'+h+'" cy="'+h+'" r="'+r+'" fill="none" stroke="#8b7bc8" stroke-width="'+stroke+'" stroke-linecap="round" stroke-dasharray="'+c+'" stroke-dashoffset="'+off+'" transform="rotate(-90 '+h+' '+h+')"/>'
-    +'<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-size="'+fs+'" font-weight="700" fill="#26231e">'+pct+'%</text></svg>';
+    +'<text x="50%" y="'+(sub?'43%':'50%')+'" text-anchor="middle" dominant-baseline="central" font-size="'+fs+'" font-weight="700" fill="#26231e">'+pct+'%</text>'
+    +(sub?'<text x="50%" y="67%" text-anchor="middle" dominant-baseline="central" font-size="'+Math.round(fs*0.34)+'" font-weight="700" fill="#8273bf">'+sub+'</text>':'')+'</svg>';
 }
 function wsGroups(){
   if(wsView==='etape') return WS_STEPS.map(s=>({key:s.k,name:s.n,desc:s.d,items:WS.filter(t=>t.step===s.k&&(s.k!==''||t.st!=='done'))}));
@@ -2491,9 +2498,9 @@ function renderSite(){
   setBadge('c-site',pct+'%');
   const nx=WS.filter(t=>wsMine(t)&&t.st!=='done'&&t.st!=='wait'&&(t.step==='MAINTENANT'||t.step==='SITE PRET'))
     .sort((a,b)=>((a.step==='MAINTENANT'?0:1)-(b.step==='MAINTENANT'?0:1))||wsSort(a,b))[0];
-  let h='<div class="card"><div class="ws-top"><div class="ws-gauge">'+wsRing(pct,130,13,26,pct2)
-    +'<div class="gl">prêt pour le lancement<br>'+ld+' / '+launch.length+' tâches (étapes 1 et 2)'
-    +(lb?'<br><b style="color:#5f4fa0">+'+lb+' en branche → '+pct2+' % une fois fusionné</b>':'')+'</div></div>'
+  let h='<div class="card"><div class="ws-top"><div class="ws-gauge">'+wsRing(pct,130,13,26,pct2,lb?('('+pct2+' %)'):'')
+    +'<div class="gl">prêt pour le lancement<br>'+ld+' / '+launch.length+' tâches'
+    +'</div></div>'
     +'<div class="ws-stats">'
     +'<div class="ws-stat" style="background:#eef5ea" data-wsf="done"><b>'+WS.filter(t=>t.st==='done').length+'</b><span>tâches faites</span></div>'
     +'<div class="ws-stat" style="background:#f1eef9" data-wsf="mine"><b>'+nMine+'</b><span>à faire par moi</span></div>'
