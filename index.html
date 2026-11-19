@@ -311,6 +311,8 @@
   .invcaret{ color:#b0a894; font-size:11px; }
   .invbody{ padding:0 0 12px 26px; } .invnote{ margin-top:6px; font-size:13px; color:#4a4438; background:#faf8f3; border-radius:8px; padding:8px 10px; }
   #invOverlay .typechip{ font-family:inherit; }
+  .prioclick{ cursor:pointer; } .prioclick:hover{ filter:brightness(.95); outline:1px solid #d9d2c3; }
+  .prioempty{ background:#fff !important; border:1px dashed #d9d2c3; color:#b0a894 !important; }
   .acnudge{ display:none; margin:14px 0 0; padding:10px 12px; border-radius:12px; background:#f6f3ec; color:#6f6857; font-size:13px; font-weight:600; cursor:pointer; }
   .acnudge:hover{ background:#efeadf; }
   .morebtn{ width:100%; margin-top:10px; border:1px dashed #ded8ca; background:none; color:#8a8375; border-radius:10px; padding:8px; font-size:12.5px; font-weight:600; cursor:pointer; }
@@ -600,6 +602,13 @@
   <textarea id="invNote" class="aiq" placeholder="Petite note (où ça en est, ce que tu en penses…)" style="margin-top:10px"></textarea>
   <div class="mactions"><button class="btn btn-ghost" id="invCancel">Annuler</button><button class="btn btn-go" id="invGo">Enregistrer</button></div>
 </div></div>
+<div class="overlay" id="prioOverlay"><div class="modal">
+  <h3>Priorité</h3>
+  <p id="prioName" style="font-weight:600;color:#4a4438;margin:0 0 12px"></p>
+  <div class="tags" id="prioChoices"><button class="typechip" data-pv="Très urgent">Très urgent</button><button class="typechip" data-pv="Urgent">Urgent</button><button class="typechip" data-pv="Modéré">Modéré</button><button class="typechip" data-pv="Faible">Faible</button><button class="typechip" data-pv="">Aucune</button></div>
+  <div class="bd-hint">Enregistré directement dans TO DO 2026 (colonne PRIORITE).</div>
+  <div class="mactions"><button class="btn btn-ghost" id="prioCancel">Annuler</button></div>
+</div></div>
 <div class="overlay" id="pauseOverlay"><div class="pausebox">
   <span class="pe" id="pauseEmoji">☕</span>
   <h3 id="pauseTitle">Pause</h3>
@@ -621,7 +630,7 @@
    Le navigateur garde l'ancienne page en mémoire. On va chercher la vraie
    dernière version au chargement : si le numéro a changé, on recharge tout seul.
    (Change VERSION à chaque nouveau dépôt sur GitHub.) */
-const VERSION='2026-11-19-5';
+const VERSION='2026-11-19-6';
 (async function(){
   try{
     const t=await fetch('index.html?v='+Date.now(),{cache:'reload'}).then(r=>r.text());
@@ -2668,7 +2677,8 @@ function acItem(r,i,laterList){
   else if(laterList) acts='<button class="acbtn go" data-a="cas" data-i="'+i+'">⚡ Aujourd’hui</button><button class="acbtn" data-a="unlater" data-i="'+i+'">↩ Remettre</button>';
   else acts='<button class="acbtn go" data-a="cas" data-i="'+i+'">⚡ Aujourd’hui</button><button class="acbtn" data-a="date" data-i="'+i+'">📅 Date</button><button class="acbtn" data-a="later" data-i="'+i+'">⏳ Plus tard</button><button class="acbtn" data-a="wait" data-i="'+i+'">⏸ Attente</button><button class="acbtn" data-a="proj" data-i="'+i+'" title="Ce n\'est pas une tâche : le ranger dans Projets & invitations">🎤 Projet</button>';
   return '<div class="todo'+(due?' acrel':'')+'">'
-    +(r.prio?'<span class="prio '+prioClass(pr)+'">'+esc(prioLabel(r.prio))+'</span>':'')
+    +(r.prio?'<span class="prio '+prioClass(pr)+' prioclick" data-a="prio" data-i="'+i+'" title="Changer la priorité">'+esc(prioLabel(r.prio))+'</span>'
+            :'<span class="prio p0 prioclick prioempty" data-a="prio" data-i="'+i+'" title="Donner une priorité">+ prio</span>')
     +'<div class="tdb"><div class="tdt">'+(due?'🔔 Relancer — ':'')+(k?'<span class="acsrc '+k+'">'+srcLabel(k)+'</span>':'')+esc(r.action)+'</div>'
     +(meta?'<div class="tdm">'+esc(meta)+'</div>':'')+link+'</div>'
     +'<div class="acacts">'+acts+'</div></div>';
@@ -2746,6 +2756,7 @@ async function acClick(e){
     else if(a==='later'){ AC_LATER[acKey(r)]=ymd(new Date()); saveJSON('td_aclater',AC_LATER); renderAC(); toast('⏳ Rangé dans « Plus tard »'); }
     else if(a==='unlater'){ delete AC_LATER[acKey(r)]; saveJSON('td_aclater',AC_LATER); renderAC(); }
     else if(a==='wait') openWait(r);
+    else if(a==='prio') openPrio(r);
     else if(a==='proj'){
       const t=await invEnsure();
       const line=[r.cre||frDate(new Date()), '', r.action, '', '', '', 'En stand-by', r.det, r.lien, 'To-do'];
@@ -2771,6 +2782,23 @@ $('waList').addEventListener('click',async function(e){
   }catch(err){ if(err.message!=='ligne déplacée') toast('⚠️ '+err.message); }
 });
 $('waHead').addEventListener('click',function(){ WA_OPEN=!WA_OPEN; saveJSON('td_waopen',WA_OPEN); renderAC(); });
+
+/* ---------- priorité ---------- */
+function openPrio(r){
+  AC_TGT=r; $('prioName').textContent=r.action;
+  document.querySelectorAll('#prioChoices .typechip').forEach(function(b){ b.classList.toggle('on',norm(b.getAttribute('data-pv'))===norm(r.prio)); });
+  $('prioOverlay').classList.add('on');
+}
+$('prioCancel').addEventListener('click',function(){ $('prioOverlay').classList.remove('on'); });
+$('prioOverlay').addEventListener('click',async function(e){
+  if(e.target===$('prioOverlay')){ $('prioOverlay').classList.remove('on'); return; }
+  const v=e.target.getAttribute&&e.target.getAttribute('data-pv'); if(v==null) return;
+  const r=AC_TGT; if(!r) return;
+  $('prioOverlay').classList.remove('on');
+  r.prio=v; renderAC();
+  try{ const o={}; o[K.prio]=v; await acSetCells(r,o); toast(v?('Priorité : '+v):'Priorité retirée'); await loadAC(); try{ loadTodo(); }catch(x){} }
+  catch(err){ if(err.message!=='ligne déplacée') toast('⚠️ '+err.message); await loadAC(); }
+});
 
 /* ---------- ⚡ caser aujourd'hui ---------- */
 function casMark(){
